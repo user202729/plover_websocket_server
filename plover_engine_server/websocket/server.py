@@ -49,7 +49,12 @@ class WebSocketServer(EngineServer):
         self._app.on_shutdown.append(self._on_server_shutdown)
 
         self.status = ServerStatus.Running
-        web.run_app(self._app, host=self._host, port=self._port)
+
+        self._runner = runner = web.AppRunner(self._app)
+        loop.run_until_complete(runner.setup())
+        self._site = site = web.TCPSite(runner, host=self._host, port=self._port)
+        loop.run_until_complete(site.start())
+        loop.run_forever()
 
     async def _stop(self):
         """Stops the server.
