@@ -38,6 +38,7 @@ class EngineServer(Thread):
         self._port = port
 
         self._loop = None
+        self._callbacks = []
         self.status: ServerStatus = ServerStatus.Stopped
 
     def queue_message(self, data: dict):
@@ -90,3 +91,15 @@ class EngineServer(Thread):
         """
 
         raise NotImplementedError()
+
+    def register_message_callback(self, callback):
+        self._callbacks.append(callback)
+
+    def _on_message(self, data: dict):
+        """Stuff stuff. Subclasses should call this function on message received.
+
+        Args:
+            data: The received data.
+        """
+        for callback in self._callbacks:
+            callback(data)

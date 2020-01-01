@@ -34,7 +34,6 @@ class WebSocketServer(EngineServer):
 
         Will create a blocking event loop.
         """
-
         if self.status == ServerStatus.Running:
             raise AssertionError(ERROR_SERVER_RUNNING)
 
@@ -44,6 +43,7 @@ class WebSocketServer(EngineServer):
 
         self._app = web.Application()
         self._app['websockets'] = []
+        self._app['on_message_callback'] = self._on_message
 
         setup_routes(self._app)
         self._app.on_shutdown.append(self._on_server_shutdown)

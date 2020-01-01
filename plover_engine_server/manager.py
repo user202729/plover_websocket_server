@@ -50,6 +50,7 @@ class EngineServerManager():
         config = ServerConfig(self._config_path)
 
         self._server = WebSocketServer(config.host, config.port)
+        self._server.register_message_callback(self._on_message)
         self._server.start()
 
         # TODO: Wait until the server actually starts before connecting hooks
@@ -79,6 +80,31 @@ class EngineServerManager():
         """
 
         return self._server.status if self._server else ServerStatus.Stopped
+
+    def _on_message(self, data: dict):
+        if 'stroke' in data:
+            steno_keys = data['stroke']
+            if isinstance(steno_keys, list):
+                self._engine._machine_stroke_callback(steno_keys)
+
+        if 'translation' in data:
+            mapping = data['translation']
+            if isinstance(mapping, str):
+                from plover.steno import Stroke
+                from plover.translation import _mapping_to_macro, Translation
+                stroke = Stroke([])
+                macro = _mapping_to_macro(mapping, stroke)
+                if macro is not None:
+                    self._engine._translator.translate_macro(macro)
+                    return
+                t = (
+                    #self._engine._translator._find_translation_helper(stroke) or
+                    #self._engine._translator._find_translation_helper(stroke, system.SUFFIX_KEYS) or
+                    Translation([stroke], mapping)
+                )
+                self._engine._translator.translate_translation(t)
+                self._engine._translator.flush()
+                #self._engine._trigger_hook('stroked', stroke)
 
     def _connect_hooks(self):
         """Creates hooks into all of Plover's events."""

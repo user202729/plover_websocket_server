@@ -24,6 +24,19 @@ The same method can be used for updating and uninstalling the plugin.
 ## How to Use
 
 * Enable it in Configure -> Plugins
-* Connect to http://localhost:8086/websocket with your client and get the data pushed to you as event: data formatted JSON. Sending 'close' disconnects you.
+* Connect to http://localhost:8086/websocket with your client and get the data pushed to you as
+event: data formatted JSON.
 
-Will add more details and the exact APIs later in development.
+Received data format: Search for occurrences of `queue_message` in `plover_engine_server/manager.py`,
+or write an example program and observe its output.
+
+Controlling Plover from other programs:
+
+* Sending 'close' disconnects you.
+* Sending a valid JSON string will execute the specified action.
+For example `{"stroke": ["S-"]}` (note that invalid keys are silently dropped),
+or `{"translation": "abc"}`.
+
+Because the Plover inner working is closely tied to the assumption
+that strokes can only come from the keyboard, when `{PLOVER:RESUME}` is sent and the machine is
+"keyboard" then some characters before the cursor will be deleted.
