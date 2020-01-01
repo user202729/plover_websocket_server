@@ -23,4 +23,7 @@ The same method can be used for updating and uninstalling the plugin.
 
 ## How to Use
 
-TODO: Enable it in Configure -> Plugins then just connect to http://localhost:8086/websocket with your client and get the data pushed to you as event: data formatted JSON. Sending 'close' disconnects you. Will add more details and the exact APIs later in development.
+* Enable it in Configure -> Plugins
+* Connect to http://localhost:8086/websocket with your client and get the data pushed to you as event: data formatted JSON. Sending 'close' disconnects you.
+
+Will add more details and the exact APIs later in development.
