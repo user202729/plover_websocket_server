@@ -204,9 +204,7 @@ class EngineServerManager():
             dictionaries: A collection of the dictionaries that loaded.
         """
 
-        dictionaries_json = jsonpickle.encode(dictionaries, unpicklable=False)
-
-        data = {'dictionaries_loaded': json.loads(dictionaries_json)}
+        data = {'dictionaries_loaded': '0'}
         self._server.queue_message(data)
 
     def _on_send_string(self, text: str):
