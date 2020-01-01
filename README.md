@@ -37,6 +37,9 @@ Controlling Plover from other programs:
 For example `{"stroke": ["S-"]}` (note that invalid keys are silently dropped),
 or `{"translation": "abc"}`.
 
+If the `"force"` key is `true` then the command will be executed even when the engine is turned off.
+Note that `{PLOVER:RESUME}` will have no effect in that case.
+
 Because the Plover inner working is closely tied to the assumption
 that strokes can only come from the keyboard, when `{PLOVER:RESUME}` is sent and the machine is
 "keyboard" then some characters before the cursor will be deleted.
