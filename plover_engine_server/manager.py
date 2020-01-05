@@ -82,37 +82,38 @@ class EngineServerManager():
         return self._server.status if self._server else ServerStatus.Stopped
 
     def _on_message(self, data: dict):
-        forced_on = False
-        if data.get('forced', False) and not self._engine._is_running:
-            forced_on = True
-            self._engine._is_running = True
+        with self._engine:
+            forced_on = False
+            if data.get('forced', False) and not self._engine._is_running:
+                forced_on = True
+                self._engine._is_running = True
 
-        if 'stroke' in data:
-            steno_keys = data['stroke']
-            if isinstance(steno_keys, list):
-                self._engine._machine_stroke_callback(steno_keys)
+            if 'stroke' in data:
+                steno_keys = data['stroke']
+                if isinstance(steno_keys, list):
+                    self._engine._machine_stroke_callback(steno_keys)
 
-        if 'translation' in data:
-            mapping = data['translation']
-            if isinstance(mapping, str):
-                from plover.steno import Stroke
-                from plover.translation import _mapping_to_macro, Translation
-                stroke = Stroke([])
-                macro = _mapping_to_macro(mapping, stroke)
-                if macro is not None:
-                    self._engine._translator.translate_macro(macro)
-                    return
-                t = (
-                    #self._engine._translator._find_translation_helper(stroke) or
-                    #self._engine._translator._find_translation_helper(stroke, system.SUFFIX_KEYS) or
-                    Translation([stroke], mapping)
-                )
-                self._engine._translator.translate_translation(t)
-                self._engine._translator.flush()
-                #self._engine._trigger_hook('stroked', stroke)
+            if 'translation' in data:
+                mapping = data['translation']
+                if isinstance(mapping, str):
+                    from plover.steno import Stroke
+                    from plover.translation import _mapping_to_macro, Translation
+                    stroke = Stroke([])
+                    macro = _mapping_to_macro(mapping, stroke)
+                    if macro is not None:
+                        self._engine._translator.translate_macro(macro)
+                        return
+                    t = (
+                        #self._engine._translator._find_translation_helper(stroke) or
+                        #self._engine._translator._find_translation_helper(stroke, system.SUFFIX_KEYS) or
+                        Translation([stroke], mapping)
+                    )
+                    self._engine._translator.translate_translation(t)
+                    self._engine._translator.flush()
+                    #self._engine._trigger_hook('stroked', stroke)
 
-        if forced_on:
-            self._engine._is_running = False
+            if forced_on:
+                self._engine._is_running = False
 
     def _connect_hooks(self):
         """Creates hooks into all of Plover's events."""
