@@ -8,7 +8,8 @@ import jsonpickle
 
 from plover.engine import StenoEngine
 from plover.steno import Stroke
-from plover.config import Config, CONFIG_DIR
+from plover.config import Config
+from plover.oslayer.config import CONFIG_DIR
 from plover.formatting import _Action
 from plover.steno_dictionary import StenoDictionaryCollection
 
