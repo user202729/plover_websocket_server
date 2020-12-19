@@ -1,6 +1,7 @@
 # Plover WebSocket Server
 
-A WebSocket server for exposing [Plover](https://github.com/openstenoproject/plover) events.
+A WebSocket server for exposing [Plover](https://github.com/openstenoproject/plover) events
+and controlling Plover from an external program.
 
 This is currently under development and has the following known issues / limitations:
 
