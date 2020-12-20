@@ -5,7 +5,6 @@ and controlling Plover from an external program.
 
 This is currently under development and has the following known issues / limitations:
 
-- The host and port are not currently configurable and will always try to be on localhost:8086
 - Client connections may not be gracefully closed
 
 ## Installation
@@ -21,6 +20,21 @@ Download the latest version of Plover for your operating system from the [releas
 5. Restart Plover
 
 The same method can be used for updating and uninstalling the plugin.
+
+## Configuration
+
+To set the host name and port used, create a file named `plover_engine_server_config.json`
+inside Plover's configuration directory (same directory as `plover.cfg` file)
+with the content:
+
+```
+{
+    "host": "localhost",
+    "port": 8086
+}
+```
+
+All fields are optional. The default is included in the example above.
 
 ## How to Use
 
