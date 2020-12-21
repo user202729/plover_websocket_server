@@ -91,7 +91,7 @@ class WebSocketServer(EngineServer):
         """Broadcasts a message to connected clients.
 
         Args:
-            data: The data in JSON format to broadcast.
+            data: The data to broadcast. Internally it's sent with WebSocketResponse.send_json.
         """
 
         if not self._app:
