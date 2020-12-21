@@ -85,11 +85,11 @@ class EngineServerManager():
     def _on_message(self, data: dict):
         with self._engine:
             forced_on = False
-            if data.get('forced', False) and not self._engine._is_running:
+            if data.get('forced') and not self._engine._is_running:
                 forced_on = True
                 self._engine._is_running = True
 
-            if data.get('zero_last_stroke_length', False):
+            if data.get('zero_last_stroke_length'):
                 self._engine._machine._last_stroke_key_down_count = 0
 
             if 'stroke' in data:
