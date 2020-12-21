@@ -17,7 +17,7 @@ class ServerStatus(Enum):
     Running = auto()
 
 
-class EngineServer(Thread):
+class EngineServer:
     """A server for the Plover engine.
 
     Attributes:
@@ -32,7 +32,7 @@ class EngineServer(Thread):
             port: The port for the server to run on.
         """
 
-        super().__init__(target=self._start)
+        self._thread = Thread(target=self._start)
 
         self._host = host
         self._port = port
@@ -40,6 +40,14 @@ class EngineServer(Thread):
         self._loop = None
         self._callbacks = []
         self.status: ServerStatus = ServerStatus.Stopped
+
+    def start(self):
+        """Function to start the server (external thread)."""
+        self._thread.start()
+
+    def join(self):
+        """Function to stop the underlying thread."""
+        self._thread.join()
 
     def queue_message(self, data: dict):
         """Queues a message for the server to broadcast.

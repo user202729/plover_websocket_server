@@ -48,8 +48,22 @@ class WebSocketServer(EngineServer):
         setup_routes(self._app)
         self._app.on_shutdown.append(self._on_server_shutdown)
 
-        self.status = ServerStatus.Running
-        web.run_app(self._app, host=self._host, port=self._port, handle_signals=False)
+        self._stop_event = asyncio.Event()
+
+        async def run_async():
+            self._runner = runner = web.AppRunner(self._app)
+            await runner.setup()
+            self._site = site = web.TCPSite(runner, host=self._host, port=self._port)
+            await site.start()
+            self.status = ServerStatus.Running
+            await self._stop_event.wait()
+
+            await runner.cleanup()
+            self._app = None
+            self._loop = None
+            self.status = ServerStatus.Stopped
+
+        loop.run_until_complete(run_async())
 
     async def _stop(self):
         """Stops the server.
@@ -60,14 +74,7 @@ class WebSocketServer(EngineServer):
         if self.status != ServerStatus.Running:
             raise AssertionError(ERROR_NO_SERVER)
 
-        self._app.loop.stop()
-
-        await self._app.shutdown()
-        await self._app.cleanup()
-
-        self._app = None
-        self._loop = None
-        self.status = ServerStatus.Stopped
+        self._stop_event.set()
 
     async def _on_server_shutdown(self, app: web.Application):
         """Handles pre-shutdown behavior for the server.
