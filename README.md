@@ -55,3 +55,4 @@ Note that `{PLOVER:RESUME}` will have no effect in that case.
 Because the Plover inner working is closely tied to the assumption
 that strokes can only come from the keyboard, when `{PLOVER:RESUME}` is sent and the machine is
 "keyboard" then some characters before the cursor will be deleted.
+To prevent this, set the `"zero_last_stroke_length"` key to `true`.

@@ -89,6 +89,9 @@ class EngineServerManager():
                 forced_on = True
                 self._engine._is_running = True
 
+            if data.get('zero_last_stroke_length', False):
+                self._engine._machine._last_stroke_key_down_count = 0
+
             if 'stroke' in data:
                 steno_keys = data['stroke']
                 if isinstance(steno_keys, list):
