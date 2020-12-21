@@ -35,6 +35,7 @@ class EngineServer:
         self._thread = Thread(target=self._start)
         # it's not recommended to subclass Thread because some of its methods
         # might be accidentally overloaded, for example _stop.
+        # Documented in Python documentation: https://docs.python.org/3/library/threading.html#thread-objects
 
         self._host = host
         self._port = port
