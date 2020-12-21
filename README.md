@@ -3,10 +3,6 @@
 A WebSocket server for exposing [Plover](https://github.com/openstenoproject/plover) events
 and controlling Plover from an external program.
 
-This is currently under development and has the following known issues / limitations:
-
-- Client connections may not be gracefully closed
-
 ## Installation
 
 TODO: This will be true once released. For now, you can only pip install this from source which requires running Plover from source to use.
