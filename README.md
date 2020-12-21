@@ -43,7 +43,8 @@ All fields are optional. The default is included in the example above.
 event: data formatted JSON.
 
 Received data format: Search for occurrences of `queue_message` in `plover_engine_server/manager.py`,
-or write an example program and observe its output.
+or write an example program (or use the existing `plover_engine_server/websocket/example_client.py`)
+and observe its output.
 
 Controlling Plover from other programs:
 
