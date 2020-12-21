@@ -33,6 +33,8 @@ class EngineServer:
         """
 
         self._thread = Thread(target=self._start)
+        # it's not recommended to subclass Thread because some of its methods
+        # might be accidentally overloaded, for example _stop.
 
         self._host = host
         self._port = port
