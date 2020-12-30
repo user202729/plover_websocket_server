@@ -70,7 +70,9 @@ class EngineServerManager():
         self._disconnect_hooks()
 
         self._server.queue_stop()
+        print("Joining server thread...")
         self._server.join()
+        print("Server thread joined.")
         self._server = None
 
     def get_server_status(self) -> ServerStatus:
@@ -92,29 +94,37 @@ class EngineServerManager():
             if data.get('zero_last_stroke_length'):
                 self._engine._machine._last_stroke_key_down_count = 0
 
+            import traceback
+
             if 'stroke' in data:
                 steno_keys = data['stroke']
                 if isinstance(steno_keys, list):
-                    self._engine._machine_stroke_callback(steno_keys)
+                    try:
+                        self._engine._machine_stroke_callback(steno_keys)
+                    except:
+                        traceback.print_exc()
 
             if 'translation' in data:
                 mapping = data['translation']
                 if isinstance(mapping, str):
-                    from plover.steno import Stroke
-                    from plover.translation import _mapping_to_macro, Translation
-                    stroke = Stroke([])
-                    macro = _mapping_to_macro(mapping, stroke)
-                    if macro is not None:
-                        self._engine._translator.translate_macro(macro)
-                        return
-                    t = (
-                        #self._engine._translator._find_translation_helper(stroke) or
-                        #self._engine._translator._find_translation_helper(stroke, system.SUFFIX_KEYS) or
-                        Translation([stroke], mapping)
-                    )
-                    self._engine._translator.translate_translation(t)
-                    self._engine._translator.flush()
-                    #self._engine._trigger_hook('stroked', stroke)
+                    try:
+                        from plover.steno import Stroke
+                        from plover.translation import _mapping_to_macro, Translation
+                        stroke = Stroke([])
+                        macro = _mapping_to_macro(mapping, stroke)
+                        if macro is not None:
+                            self._engine._translator.translate_macro(macro)
+                            return
+                        t = (
+                            #self._engine._translator._find_translation_helper(stroke) or
+                            #self._engine._translator._find_translation_helper(stroke, system.SUFFIX_KEYS) or
+                            Translation([stroke], mapping)
+                        )
+                        self._engine._translator.translate_translation(t)
+                        self._engine._translator.flush()
+                        #self._engine._trigger_hook('stroked', stroke)
+                    except:
+                        traceback.print_exc()
 
             if forced_on:
                 self._engine._is_running = False

@@ -44,7 +44,12 @@ async def websocket_handler(request: web.Request) -> web.WebSocketResponse:
 
                 if isinstance(data, dict):
                     callback = request.app['on_message_callback']
-                    callback(data)
+                    try:
+                        callback(data)
+                    except:
+                        import traceback
+                        traceback.print_exc()
+
             elif message.type == WSMsgType.ERROR:
                 print('WebSocket connection closed with exception '
                       f'{socket.exception()}', flush=True)

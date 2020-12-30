@@ -97,8 +97,10 @@ class WebSocketServer(EngineServer):
         if not self._app:
             return
 
-        for socket in self._app.get('websockets', []):
+        sockets=self._app.get('websockets', [])
+        for socket in sockets:
             try:
                 await socket.send_json(data)
             except:
-                print('Failed to update websocket', flush=True)
+                print(f'Failed to update websocket {socket} {id(socket)} {socket.closed} (this should not happen)', flush=True)
+        sockets[:]=[socket for socket in sockets if not socket.closed] #this should not change sockets normally

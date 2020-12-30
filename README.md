@@ -49,6 +49,8 @@ Controlling Plover from other programs:
 For example `{"stroke": ["S-"]}` (note that invalid keys are silently dropped),
 or `{"translation": "abc"}`.
 
+If there's some error during the execution, it will be silently ignored and printed on stderr.
+
 If the `"force"` key is `true` then the command will be executed even when the engine is turned off.
 Note that `{PLOVER:RESUME}` will have no effect in that case.
 
