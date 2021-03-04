@@ -2,6 +2,7 @@
 
 from aiohttp import web, WSMsgType
 import asyncio
+from plover import log
 
 
 async def index(request: web.Request) -> web.Response:
@@ -21,12 +22,12 @@ async def websocket_handler(request: web.Request) -> web.WebSocketResponse:
         request: The request from the client.
     """
 
-    print('WebSocket connection starting', flush=True)
+    log.info('WebSocket connection starting')
     socket = web.WebSocketResponse()
     await socket.prepare(request)
     sockets = request.app['websockets']
     sockets.append(socket)
-    print('WebSocket connection ready', flush=True)
+    log.info('WebSocket connection ready')
 
     try:
         async for message in socket:
@@ -39,7 +40,7 @@ async def websocket_handler(request: web.Request) -> web.WebSocketResponse:
                 try:  # NOTE is this good API? What if message is not JSON/dict?
                     data = json.loads(message.data)
                 except json.decoder.JSONDecodeError:
-                    print('Receive unknown data: ', message.data)
+                    log.info(f'Receive unknown data: {message.data}')
                     continue
 
                 if isinstance(data, dict):
@@ -51,8 +52,8 @@ async def websocket_handler(request: web.Request) -> web.WebSocketResponse:
                         traceback.print_exc()
 
             elif message.type == WSMsgType.ERROR:
-                print('WebSocket connection closed with exception '
-                      f'{socket.exception()}', flush=True)
+                log.info('WebSocket connection closed with exception '
+                      f'{socket.exception()}')
     except asyncio.CancelledError:  # https://github.com/aio-libs/aiohttp/issues/1768
         pass
     finally:
@@ -60,5 +61,5 @@ async def websocket_handler(request: web.Request) -> web.WebSocketResponse:
 
 
     sockets.remove(socket)
-    print('WebSocket connection closed', flush=True)
+    log.info('WebSocket connection closed')
     return socket

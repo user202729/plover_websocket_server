@@ -6,6 +6,7 @@ import json
 
 import jsonpickle
 
+from plover import log
 from plover.engine import StenoEngine
 from plover.steno import Stroke
 from plover.config import Config
@@ -70,9 +71,9 @@ class EngineServerManager():
         self._disconnect_hooks()
 
         self._server.queue_stop()
-        print("Joining server thread...")
+        log.info("Joining server thread...")
         self._server.join()
-        print("Server thread joined.")
+        log.info("Server thread joined.")
         self._server = None
 
     def get_server_status(self) -> ServerStatus:
