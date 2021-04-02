@@ -288,6 +288,12 @@ class EngineServerManager():
         data = {'lookup': True}
         self._server.queue_message(data)
 
+    def _on_suggestions(self):
+        """Broadcasts when the suggestions tool is opened via a command."""
+
+        data = {'suggestions': True}
+        self._server.queue_message(data)
+
     def _on_quit(self):
         """Broadcasts when the application is terminated.
 
