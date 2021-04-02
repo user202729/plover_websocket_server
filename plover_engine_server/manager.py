@@ -111,7 +111,8 @@ class EngineServerManager():
                     try:
                         from plover.steno import Stroke
                         from plover.translation import _mapping_to_macro, Translation
-                        stroke = Stroke([])
+                        stroke = Stroke([]) # required, because otherwise Plover will try to merge the outlines together
+						# and the outline [] (instead of [Stroke([])]) can be merged to anything
                         macro = _mapping_to_macro(mapping, stroke)
                         if macro is not None:
                             self._engine._translator.translate_macro(macro)
