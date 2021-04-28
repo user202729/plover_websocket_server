@@ -5,13 +5,11 @@ and controlling Plover from an external program.
 
 ## Installation
 
-TODO: This will be true once released. For now, you can only pip install this from source which requires running Plover from source to use.
-
 Download the latest version of Plover for your operating system from the [releases page](https://github.com/openstenoproject/plover/releases). Only versions 4.0.0.dev8 and higher are supported.
 
 1. Open Plover
 2. Navigate to the Plugin Manager tool
-3. Select the "plover-websocket-server" plugin entry in the list
+3. Select the "plover-engine-server-2" plugin entry in the list
 4. Click install
 5. Restart Plover
 
