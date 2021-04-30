@@ -94,6 +94,7 @@ class EngineServerManager():
 
             if data.get('zero_last_stroke_length'):
                 self._engine._machine._last_stroke_key_down_count = 0
+                self._engine._machine._stroke_key_down_count = 0
 
             import traceback
 
