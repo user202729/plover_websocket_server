@@ -1,3 +1,4 @@
+#!/bin/python
 """An example client for the server."""
 
 import argparse
@@ -20,14 +21,27 @@ async def client_loop(host: str, port: str):
     session = aiohttp.ClientSession()
 
     async with session.ws_connect(url) as socket:
-        async for message in socket:
-            if message.type in (aiohttp.WSMsgType.CLOSE,
-                                aiohttp.WSMsgType.CLOSING,
-                                aiohttp.WSMsgType.CLOSED,
-                                aiohttp.WSMsgType.ERROR):
-                break
+        async def send_function():
+            while True:
+                await asyncio.sleep(1)
+                print("do toggle")
+                await socket.send_str(r'{"zero_last_stroke_length": true, "translation": "{PLOVER:toggle}"}')
 
-            print(f'data: {message.data}')
+        async def listen_function():
+            async for message in socket:
+                if message.type in (aiohttp.WSMsgType.CLOSE,
+                                    aiohttp.WSMsgType.CLOSING,
+                                    aiohttp.WSMsgType.CLOSED,
+                                    aiohttp.WSMsgType.ERROR):
+                    break
+
+                print(f'data: {message.data}')
+
+        await asyncio.gather(
+                send_function(),
+                listen_function(),
+                )
+
 
 
 def main():
