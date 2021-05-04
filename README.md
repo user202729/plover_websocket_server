@@ -53,6 +53,8 @@ If the `"force"` key is `true` then the command will be executed even when the e
 Note that `{PLOVER:RESUME}` will have no effect in that case.
 
 Because the Plover inner working is closely tied to the assumption
-that strokes can only come from the keyboard, when `{PLOVER:RESUME}` is sent and the machine is
-"keyboard" then some characters before the cursor will be deleted.
-To prevent this, set the `"zero_last_stroke_length"` key to `true`.
+that strokes can only come from the keyboard, when `{PLOVER:RESUME}` (or a command with similar effect,
+such as `{PLOVER:TOGGLE}`) is sent and the machine is
+"Keyboard" then some characters before the cursor will be deleted.
+To prevent this, set the `"zero_last_stroke_length"` key to `true`.  
+**Note** This should be used very sparingly because it may have unintended effects.
