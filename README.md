@@ -3,6 +3,10 @@
 A WebSocket server for exposing [Plover](https://github.com/openstenoproject/plover) events
 and controlling Plover from an external program.
 
+This plugin is available on [GitHub]( https://github.com/user202729/plover_websocket_server)
+and [PyPI](https://pypi.org/project/plover-engine-server-2/) (under the name `plover-engine-server-2`).
+Report all bugs on GitHub.
+
 ## Installation
 
 Download the latest version of Plover for your operating system from the [releases page](https://github.com/openstenoproject/plover/releases). Only versions 4.0.0.dev8 and higher are supported.
