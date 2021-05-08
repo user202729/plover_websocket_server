@@ -37,7 +37,7 @@ All fields are optional. The default is included in the example above.
 ## How to Use
 
 * Enable it in Configure -> Plugins
-* Connect to http://localhost:8086/websocket with your client and get the data pushed to you as
+* Connect to ws://localhost:8086/websocket with your client and get the data pushed to you as
 event: data formatted JSON.
 
 Received data format: Search for occurrences of `queue_message` in `plover_engine_server/manager.py`,
