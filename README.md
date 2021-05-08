@@ -21,14 +21,16 @@ The same method can be used for updating and uninstalling the plugin.
 
 ## Configuration
 
-To set the host name and port used, create a file named `plover_engine_server_config.json`
-inside Plover's configuration directory (same directory as `plover.cfg` file)
-with the content:
+To configure the plugin, create a file named `plover_engine_server_config.json`
+inside Plover's configuration directory (same directory as `plover.cfg` file).
+
+Example content:
 
 ```
 {
     "host": "localhost",
-    "port": 8086
+    "port": 8086,
+    "secretkey": "mysecretkey"
 }
 ```
 
@@ -50,6 +52,9 @@ Controlling Plover from other programs:
 * Sending a valid JSON string will execute the specified action.
 For example `{"stroke": ["S-"]}` (note that invalid keys are silently dropped),
 or `{"translation": "abc"}`.
+
+Note: to avoid Plover being controlled by a malicious website, you should set some secret key, and
+add the secret key into the sent content. For example `{"stroke": ["S-"], "secretkey": "mysecretkey"}`.
 
 If there's some error during the execution, it will be silently ignored and printed on stderr.
 
