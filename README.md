@@ -26,7 +26,7 @@ inside Plover's configuration directory (same directory as `plover.cfg` file).
 
 Example content:
 
-```
+```json
 {
     "host": "localhost",
     "port": 8086,
