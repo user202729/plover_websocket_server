@@ -141,7 +141,10 @@ class EngineServerManager():
             raise AssertionError(ERROR_MISSING_ENGINE)
 
         for hook in self._engine.HOOKS:
-            callback = getattr(self, f'_on_{hook}')
+            try:
+                callback = getattr(self, f'_on_{hook}')
+            except AttributeError:
+                continue
             self._engine.hook_connect(hook, callback)
 
     def _disconnect_hooks(self):
@@ -151,7 +154,10 @@ class EngineServerManager():
             raise AssertionError(ERROR_MISSING_ENGINE)
 
         for hook in self._engine.HOOKS:
-            callback = getattr(self, f'_on_{hook}')
+            try:
+                callback = getattr(self, f'_on_{hook}')
+            except AttributeError:
+                continue
             self._engine.hook_disconnect(hook, callback)
 
     def _on_stroked(self, stroke: Stroke):
