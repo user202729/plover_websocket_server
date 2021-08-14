@@ -42,6 +42,12 @@ class WebSocketServer(EngineServer):
         self._loop = loop
 
         self._app = web.Application()
+
+        async def on_shutdown(app):
+            for ws in set(app['websockets']):
+                await ws.close()
+        self._app.on_shutdown.append(on_shutdown)
+
         self._app['websockets'] = []
         self._app['on_message_callback'] = self._on_message
 
@@ -57,7 +63,6 @@ class WebSocketServer(EngineServer):
             await site.start()
             self.status = ServerStatus.Running
             await self._stop_event.wait()
-
             await runner.cleanup()
             self._app = None
             self._loop = None
