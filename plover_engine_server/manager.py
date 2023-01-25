@@ -169,7 +169,7 @@ class EngineServerManager():
 
         stroke_json = jsonpickle.encode(stroke, unpicklable=False)
 
-        data = {'stroked': json.loads(stroke_json)}
+        data = {'stroked': json.loads(stroke_json), 'rtfcre': stroke.rtfcre}
         self._server.queue_message(data)
 
     def _on_translated(self, old: List[_Action], new: List[_Action]):
