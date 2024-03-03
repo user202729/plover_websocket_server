@@ -3,6 +3,7 @@
 import asyncio
 
 from aiohttp import web, WSCloseCode
+import ssl
 
 from plover_engine_server.errors import (
     ERROR_SERVER_RUNNING,
@@ -18,7 +19,8 @@ from plover_engine_server.websocket.routes import setup_routes
 class WebSocketServer(EngineServer):
     """A server based on WebSockets."""
 
-    def __init__(self, host: str, port: str):
+    _ssl: dict
+    def __init__(self, host: str, port: str, ssl: dict):
         """Initialize the server.
 
         Args:
@@ -28,6 +30,7 @@ class WebSocketServer(EngineServer):
 
         super().__init__(host, port)
         self._app = None
+        self._ssl = ssl
 
     def _start(self):
         """Starts the server.
@@ -59,7 +62,15 @@ class WebSocketServer(EngineServer):
         async def run_async():
             self._runner = runner = web.AppRunner(self._app)
             await runner.setup()
-            self._site = site = web.TCPSite(runner, host=self._host, port=self._port)
+
+            if self._ssl:
+                # Load your SSL certificate and private key
+                ssl_context = ssl.create_default_context(ssl.Purpose.SERVER_AUTH)
+                ssl_context.load_cert_chain(self._ssl.get('cert_path'), self._ssl.get('key_path'))
+            else:
+                ssl_context = None
+
+            self._site = site = web.TCPSite(runner, host=self._host, port=self._port, ssl_context=ssl_context)
             await site.start()
             self.status = ServerStatus.Running
             await self._stop_event.wait()

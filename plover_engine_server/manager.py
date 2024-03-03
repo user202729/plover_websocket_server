@@ -51,7 +51,7 @@ class EngineServerManager():
 
         self._config = ServerConfig(self._config_path)  # reload the configuration when the server is restarted
 
-        self._server = WebSocketServer(self._config.host, self._config.port)
+        self._server = WebSocketServer(self._config.host, self._config.port, self._config.ssl)
         self._server.register_message_callback(self._on_message)
         self._server.start()
 

@@ -28,9 +28,13 @@ Example content:
 
 ```json
 {
-    "host": "localhost",
-    "port": 8086,
-    "secretkey": "mysecretkey"
+  "host": "localhost",
+  "port": 8086,
+  "secretkey": "mysecretkey",
+  "ssl": {
+    "cert_path": "/path/to/cert.pem",
+    "key_path": "/path/to/key.pem"
+  }
 }
 ```
 
@@ -65,5 +69,5 @@ Because the Plover inner working is closely tied to the assumption
 that strokes can only come from the keyboard, when `{PLOVER:RESUME}` (or a command with similar effect,
 such as `{PLOVER:TOGGLE}`) is sent and the machine is
 "Keyboard" then some characters before the cursor will be deleted.
-To prevent this, set the `"zero_last_stroke_length"` key to `true`.  
+To prevent this, set the `"zero_last_stroke_length"` key to `true`.
 **Note** This should be used very sparingly because it may have unintended effects.
