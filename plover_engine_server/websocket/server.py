@@ -73,7 +73,7 @@ class WebSocketServer(EngineServer):
         asyncio.set_event_loop(loop)
         self._loop = loop
 
-        self._app = web.Application(middlewares=[self.secret_auth_middleware])
+        self._app = web.Application(middlewares=[self.secret_auth_middleware, self.context_middleware])
 
         async def on_shutdown(app):
             for ws in set(app['websockets']):
