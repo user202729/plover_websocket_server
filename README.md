@@ -57,8 +57,8 @@ Controlling Plover from other programs:
 For example `{"stroke": ["S-"]}` (note that invalid keys are silently dropped),
 or `{"translation": "abc"}`.
 
-Note: to avoid Plover being controlled by a malicious website, you should set some secret key, and
-add the secret key into the sent content. For example `{"stroke": ["S-"], "secretkey": "mysecretkey"}`.
+Note: to avoid Plover being controlled by a malicious website, you should set some other than default key, and
+add the secret key to the request header 'X-Secret-Token'.
 
 If there's some error during the execution, it will be silently ignored and printed on stderr.
 
