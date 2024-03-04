@@ -20,7 +20,7 @@ async def protocol(request: web.Request) -> web.Response:
         request: The request from the client.
     """
 
-    if request('ssl'):
+    if request['ssl']:
         protocol ="wss://"
     else:
         protocol = "ws://"
