@@ -43,7 +43,7 @@ All fields are optional, except if you have either specified a `cert_path` or a 
 ## How to Use
 
 * Enable it in Configure -> Plugins
-* Connect to ws://localhost:8086/websocket with your client and get the data pushed to you as
+* Connect to either ws://localhost:8086/websocket or wss://localhost:8086/websocket, depending on wheter or not you have specified ssl configuration, with your client and get the data pushed to you as
 event: data formatted JSON.
 
 Received data format: Search for occurrences of `queue_message` in `plover_engine_server/manager.py`,

@@ -20,7 +20,10 @@ async def client_loop(host: str, port: str):
     url = f'http://{host}:{port}/websocket'
     session = aiohttp.ClientSession()
 
-    async with session.ws_connect(url) as socket:
+    # Create custom headers
+    headers = {"X-Secret-Token": "mysecretkey"}
+
+    async with session.ws_connect(url, headers=headers) as socket:
         async def send_function():
             while True:
                 await asyncio.sleep(1)
