@@ -19,7 +19,10 @@ from plover_engine_server.websocket.routes import setup_routes
 class WebSocketServer(EngineServer):
     """A server based on WebSockets."""
 
-    _ssl: dict
+    _ssl: dict[
+        { "cert_path" , str },
+        { "key_path", str }
+    ]
     def __init__(self, host: str, port: str, ssl: dict):
         """Initialize the server.
 
