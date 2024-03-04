@@ -15,7 +15,6 @@ from plover_engine_server.server import (
 )
 from plover_engine_server.websocket.routes import setup_routes
 
-
 class WebSocketServer(EngineServer):
     """A server based on WebSockets."""
 
@@ -23,7 +22,9 @@ class WebSocketServer(EngineServer):
         { "cert_path" , str },
         { "key_path", str }
     ]
-    def __init__(self, host: str, port: str, ssl: dict):
+    _app: web.Application
+    _secretkey: str
+    def __init__(self, host: str, port: str, secretkey: str, ssl: dict):
         """Initialize the server.
 
         Args:
@@ -34,6 +35,31 @@ class WebSocketServer(EngineServer):
         super().__init__(host, port)
         self._app = None
         self._ssl = ssl
+        self._secretkey = secretkey
+
+    async def secret_auth_middleware(self, handler: function):
+        async def middleware(request: web.Request):
+            # Get the secret token from the request (you can use headers, query params, etc.)
+            provided_secret = request.headers.get('X-Secret-Token')
+
+            if provided_secret == self._secretkey:
+                # Secret matches, proceed with the request
+                return await handler(request)
+            else:
+                # Secret doesn't match, return a 403 Forbidden response
+                return web.Response(status=403, text='Forbidden')
+
+        return middleware
+
+    async def context_middleware(self, handler: function):
+        async def middleware(request: web.Request):
+            # Inject ssl bool into the request context
+            request['ssl'] = True if (self._ssl) else False
+
+            # Proceed with the request
+            return await handler(request)
+
+        return middleware
 
     def _start(self):
         """Starts the server.
@@ -47,7 +73,7 @@ class WebSocketServer(EngineServer):
         asyncio.set_event_loop(loop)
         self._loop = loop
 
-        self._app = web.Application()
+        self._app = web.Application(middlewares=[self.secret_auth_middleware])
 
         async def on_shutdown(app):
             for ws in set(app['websockets']):

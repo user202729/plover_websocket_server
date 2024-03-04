@@ -4,7 +4,6 @@ from aiohttp import web, WSMsgType
 import asyncio
 from plover import log
 
-
 async def index(request: web.Request) -> web.Response:
     """Index endpoint for the server. Not really needed.
 
@@ -13,6 +12,24 @@ async def index(request: web.Request) -> web.Response:
     """
 
     return web.Response(text='index')
+
+async def protocol(request: web.Request) -> web.Response:
+    """Route to get the protocol of the web server.
+
+    Args:
+        request: The request from the client.
+    """
+
+    if request('ssl'):
+        protocol ="wss://"
+    else:
+        protocol = "ws://"
+
+    data = {
+        "protocol": protocol
+    }
+
+    return web.json_response(data)
 
 
 async def websocket_handler(request: web.Request) -> web.WebSocketResponse:

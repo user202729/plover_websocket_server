@@ -51,7 +51,7 @@ class EngineServerManager():
 
         self._config = ServerConfig(self._config_path)  # reload the configuration when the server is restarted
 
-        self._server = WebSocketServer(self._config.host, self._config.port, self._config.ssl)
+        self._server = WebSocketServer(self._config.host, self._config.port, self._config.ssl, self._config.secretkey)
         self._server.register_message_callback(self._on_message)
         self._server.start()
 
@@ -86,8 +86,6 @@ class EngineServerManager():
         return self._server.status if self._server else ServerStatus.Stopped
 
     def _on_message(self, data: dict):
-        if data.get("secretkey", "") != self._config.secretkey:
-            return
         with self._engine:
             forced_on = False
             if data.get('forced') and not self._engine._is_running:
