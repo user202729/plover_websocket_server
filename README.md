@@ -38,7 +38,7 @@ Example content:
 }
 ```
 
-All fields are optional. The default is included in the example above.
+All fields are optional, except if you have either specified a `cert_path` or a `key_path`. In that case you have to make sure that the path pair is properly set there. The default is included in the example above.
 
 ## How to Use
 
