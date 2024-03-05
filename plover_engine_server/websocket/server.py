@@ -57,7 +57,7 @@ class WebSocketServer(EngineServer):
     async def context_middleware(self, handler: function):
         async def middleware(request: web.Request):
             # Inject ssl bool into the request context
-            request['ssl'] = True if (self._ssl) else False
+            request.ssl = True if (self._ssl) else False
 
             # Proceed with the request
             return await handler(request)

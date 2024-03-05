@@ -13,14 +13,21 @@ async def index(request: web.Request) -> web.Response:
 
     return web.Response(text='index')
 
-async def protocol(request: web.Request) -> web.Response:
+class RequestWithContext(web.Request):
+    ssl: bool
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+async def protocol(request: RequestWithContext) -> web.Response:
     """Route to get the protocol of the web server.
 
     Args:
         request: The request from the client.
     """
+    if request.method != 'GET':
+        return web.Response(status=405, text="Method Not Allowed")
 
-    if request['ssl']:
+    if request.ssl:
         protocol ="wss://"
     else:
         protocol = "ws://"
