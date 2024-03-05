@@ -46,7 +46,9 @@ All fields are optional, except if you have either specified a `cert_path` or a 
 * Connect to either ws://localhost:8086/websocket or wss://localhost:8086/websocket, depending on whether or not you have specified SSL configuration, with your client and get the data pushed to you as
 event: data formatted JSON.
 
-Received data format: Search for occurrences of `queue_message` in `plover_engine_server/manager.py`,
+### Received data format
+
+Search for occurrences of `queue_message` in `plover_engine_server/manager.py`,
 or write an example program (or use the existing `plover_engine_server/websocket/example_client.py`)
 and observe its output.
 
