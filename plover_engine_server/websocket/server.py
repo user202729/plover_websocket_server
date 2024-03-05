@@ -15,13 +15,16 @@ from plover_engine_server.server import (
 )
 from plover_engine_server.websocket.routes import setup_routes
 
+from typing import TypedDict
+
+class SSLConfig(TypedDict):
+    cert_path: str
+    key_path: str
+
 class WebSocketServer(EngineServer):
     """A server based on WebSockets."""
 
-    _ssl: dict[
-        { "cert_path" , str },
-        { "key_path", str }
-    ]
+    _ssl: SSLConfig
     _app: web.Application
     _secretkey: str
     def __init__(self, host: str, port: str, secretkey: str, ssl: dict):
