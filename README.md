@@ -43,7 +43,7 @@ All fields are optional, except if you have either specified a `cert_path` or a 
 ## How to Use
 
 * Enable it in Configure -> Plugins
-* Connect to either ws://localhost:8086/websocket or wss://localhost:8086/websocket, depending on wheter or not you have specified ssl configuration, with your client and get the data pushed to you as
+* Connect to either ws://localhost:8086/websocket or wss://localhost:8086/websocket, depending on whether or not you have specified SSL configuration, with your client and get the data pushed to you as
 event: data formatted JSON.
 
 Received data format: Search for occurrences of `queue_message` in `plover_engine_server/manager.py`,
@@ -58,7 +58,7 @@ For example `{"stroke": ["S-"]}` (note that invalid keys are silently dropped),
 or `{"translation": "abc"}`.
 
 Note: to avoid Plover being controlled by a malicious website, you should set some other than default key, and
-add the secret key to the request header 'X-Secret-Token'.
+add the secret key to the request header `X-Secret-Token`.
 
 If there's some error during the execution, it will be silently ignored and printed on stderr.
 

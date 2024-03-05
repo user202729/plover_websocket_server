@@ -25,7 +25,7 @@ async def protocol(request: web.Request, context: APIContext) -> web.Response:
         return web.Response(status=HTTPStatus.METHOD_NOT_ALLOWED, text=HTTPStatus.METHOD_NOT_ALLOWED[1])
 
     if context.ssl:
-        protocol ="wss://"
+        protocol = "wss://"
     else:
         protocol = "ws://"
 
