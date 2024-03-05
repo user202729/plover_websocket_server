@@ -3,6 +3,7 @@
 from aiohttp import web, WSMsgType
 import asyncio
 from plover import log
+from http import HTTPStatus, HTTPMethod
 
 async def index(request: web.Request) -> web.Response:
     """Index endpoint for the server. Not really needed.
@@ -24,8 +25,8 @@ async def protocol(request: RequestWithContext) -> web.Response:
     Args:
         request: The request from the client.
     """
-    if request.method != 'GET':
-        return web.Response(status=405, text="Method Not Allowed")
+    if request.method != HTTPMethod.GET:
+        return web.Response(status=HTTPStatus.METHOD_NOT_ALLOWED, text=HTTPStatus.METHOD_NOT_ALLOWED[1])
 
     if request.ssl:
         protocol ="wss://"
