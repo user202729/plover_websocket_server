@@ -1,5 +1,7 @@
 # Plover WebSocket Server
 
+[![PyPI](https://img.shields.io/pypi/v/plover-engine-server-2?style=flat)](https://pypi.python.org/pypi/plover-engine-server-2/)
+
 A WebSocket server for exposing [Plover](https://github.com/openstenoproject/plover) events
 and controlling Plover from an external program.
 
