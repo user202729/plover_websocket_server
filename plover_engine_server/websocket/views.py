@@ -4,6 +4,7 @@ from aiohttp import web, WSMsgType
 import asyncio
 from plover import log
 from http import HTTPStatus, HTTPMethod
+from plover_engine_server.websocket.server import APIContext
 
 async def index(request: web.Request) -> web.Response:
     """Index endpoint for the server. Not really needed.
@@ -14,12 +15,7 @@ async def index(request: web.Request) -> web.Response:
 
     return web.Response(text='index')
 
-class RequestWithContext(web.Request):
-    ssl: bool
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-async def protocol(request: RequestWithContext) -> web.Response:
+async def protocol(request: web.Request, context: APIContext) -> web.Response:
     """Route to get the protocol of the web server.
 
     Args:
@@ -28,7 +24,7 @@ async def protocol(request: RequestWithContext) -> web.Response:
     if request.method != HTTPMethod.GET:
         return web.Response(status=HTTPStatus.METHOD_NOT_ALLOWED, text=HTTPStatus.METHOD_NOT_ALLOWED[1])
 
-    if request.ssl:
+    if context.ssl:
         protocol ="wss://"
     else:
         protocol = "ws://"

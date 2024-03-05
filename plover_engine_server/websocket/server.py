@@ -17,6 +17,9 @@ from plover_engine_server.websocket.routes import setup_routes
 
 from typing import TypedDict
 
+class APIContext(TypedDict):
+    ssl: bool
+
 class SSLConfig(TypedDict):
     cert_path: str
     key_path: str
@@ -57,10 +60,10 @@ class WebSocketServer(EngineServer):
     async def context_middleware(self, handler: function):
         async def middleware(request: web.Request):
             # Inject ssl bool into the request context
-            request.ssl = True if (self._ssl) else False
+            context: APIContext = {'ssl': True if (self._ssl) else False}
 
             # Proceed with the request
-            return await handler(request)
+            return await handler(request, context)
 
         return middleware
 
