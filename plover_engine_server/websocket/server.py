@@ -3,6 +3,7 @@
 import asyncio
 
 from aiohttp import web, WSCloseCode
+import ssl
 
 from plover_engine_server.errors import (
     ERROR_SERVER_RUNNING,
@@ -14,11 +15,22 @@ from plover_engine_server.server import (
 )
 from plover_engine_server.websocket.routes import setup_routes
 
+from typing import TypedDict
+
+class APIContext(TypedDict):
+    ssl: bool
+
+class SSLConfig(TypedDict):
+    cert_path: str
+    key_path: str
 
 class WebSocketServer(EngineServer):
     """A server based on WebSockets."""
 
-    def __init__(self, host: str, port: str):
+    _ssl: SSLConfig
+    _app: web.Application
+    _secretkey: str
+    def __init__(self, host: str, port: str, secretkey: str, ssl: dict):
         """Initialize the server.
 
         Args:
@@ -28,6 +40,32 @@ class WebSocketServer(EngineServer):
 
         super().__init__(host, port)
         self._app = None
+        self._ssl = ssl
+        self._secretkey = secretkey
+
+    async def secret_auth_middleware(self, handler: function):
+        async def middleware(request: web.Request):
+            # Get the secret token from the request (you can use headers, query params, etc.)
+            provided_secret = request.headers.get('X-Secret-Token')
+
+            if provided_secret == self._secretkey:
+                # Secret matches, proceed with the request
+                return await handler(request)
+            else:
+                # Secret doesn't match, return a 403 Forbidden response
+                return web.Response(status=403, text='Forbidden')
+
+        return middleware
+
+    async def context_middleware(self, handler: function):
+        async def middleware(request: web.Request):
+            # Inject ssl bool into the request context
+            context: APIContext = {'ssl': True if (self._ssl) else False}
+
+            # Proceed with the request
+            return await handler(request, context)
+
+        return middleware
 
     def _start(self):
         """Starts the server.
@@ -41,7 +79,7 @@ class WebSocketServer(EngineServer):
         asyncio.set_event_loop(loop)
         self._loop = loop
 
-        self._app = web.Application()
+        self._app = web.Application(middlewares=[self.secret_auth_middleware, self.context_middleware])
 
         async def on_shutdown(app):
             for ws in set(app['websockets']):
@@ -59,7 +97,15 @@ class WebSocketServer(EngineServer):
         async def run_async():
             self._runner = runner = web.AppRunner(self._app)
             await runner.setup()
-            self._site = site = web.TCPSite(runner, host=self._host, port=self._port)
+
+            if self._ssl:
+                # Load your SSL certificate and private key
+                ssl_context = ssl.create_default_context(ssl.Purpose.SERVER_AUTH)
+                ssl_context.load_cert_chain(self._ssl.get('cert_path'), self._ssl.get('key_path'))
+            else:
+                ssl_context = None
+
+            self._site = site = web.TCPSite(runner, host=self._host, port=self._port, ssl_context=ssl_context)
             await site.start()
             self.status = ServerStatus.Running
             await self._stop_event.wait()

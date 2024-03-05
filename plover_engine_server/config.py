@@ -37,3 +37,4 @@ class ServerConfig():
         self.host = data.get('host', DEFAULT_HOST)
         self.port = data.get('port', DEFAULT_PORT)
         self.secretkey = data.get('secretkey', "")
+        self.ssl = data.get('ssl', {})

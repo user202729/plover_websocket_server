@@ -28,18 +28,22 @@ Example content:
 
 ```json
 {
-    "host": "localhost",
-    "port": 8086,
-    "secretkey": "mysecretkey"
+  "host": "localhost",
+  "port": 8086,
+  "secretkey": "mysecretkey",
+  "ssl": {
+    "cert_path": "/path/to/cert.pem",
+    "key_path": "/path/to/key.pem"
+  }
 }
 ```
 
-All fields are optional. The default is included in the example above.
+All fields are optional, except if you have either specified a `cert_path` or a `key_path`. In that case you have to make sure that the path pair is properly set there. The default is included in the example above.
 
 ## How to Use
 
 * Enable it in Configure -> Plugins
-* Connect to ws://localhost:8086/websocket with your client and get the data pushed to you as
+* Connect to either ws://localhost:8086/websocket or wss://localhost:8086/websocket, depending on wheter or not you have specified ssl configuration, with your client and get the data pushed to you as
 event: data formatted JSON.
 
 Received data format: Search for occurrences of `queue_message` in `plover_engine_server/manager.py`,
@@ -53,8 +57,8 @@ Controlling Plover from other programs:
 For example `{"stroke": ["S-"]}` (note that invalid keys are silently dropped),
 or `{"translation": "abc"}`.
 
-Note: to avoid Plover being controlled by a malicious website, you should set some secret key, and
-add the secret key into the sent content. For example `{"stroke": ["S-"], "secretkey": "mysecretkey"}`.
+Note: to avoid Plover being controlled by a malicious website, you should set some other than default key, and
+add the secret key to the request header 'X-Secret-Token'.
 
 If there's some error during the execution, it will be silently ignored and printed on stderr.
 
@@ -65,5 +69,5 @@ Because the Plover inner working is closely tied to the assumption
 that strokes can only come from the keyboard, when `{PLOVER:RESUME}` (or a command with similar effect,
 such as `{PLOVER:TOGGLE}`) is sent and the machine is
 "Keyboard" then some characters before the cursor will be deleted.
-To prevent this, set the `"zero_last_stroke_length"` key to `true`.  
+To prevent this, set the `"zero_last_stroke_length"` key to `true`.
 **Note** This should be used very sparingly because it may have unintended effects.

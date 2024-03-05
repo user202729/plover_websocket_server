@@ -2,7 +2,7 @@
 
 from aiohttp import web
 
-from plover_engine_server.websocket.views import index, websocket_handler
+from plover_engine_server.websocket.views import index, protocol, websocket_handler
 
 
 def setup_routes(app: web.Application):
@@ -13,4 +13,5 @@ def setup_routes(app: web.Application):
     """
 
     app.router.add_get('/', index)
+    app.router.add_get('/protocol', protocol)
     app.router.add_get('/websocket', websocket_handler)
