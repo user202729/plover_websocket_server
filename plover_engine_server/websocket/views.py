@@ -3,7 +3,7 @@
 from aiohttp import web, WSMsgType
 import asyncio
 from plover import log
-from http import HTTPStatus, HTTPMethod
+from http import HTTPStatus
 from plover_engine_server.websocket.server import APIContext
 
 async def index(request: web.Request) -> web.Response:
@@ -21,8 +21,8 @@ async def protocol(request: web.Request, context: APIContext) -> web.Response:
     Args:
         request: The request from the client.
     """
-    if request.method != HTTPMethod.GET:
-        return web.Response(status=HTTPStatus.METHOD_NOT_ALLOWED, text=HTTPStatus.METHOD_NOT_ALLOWED[1])
+    if request.method != 'GET':
+        return web.Response(status=HTTPStatus.METHOD_NOT_ALLOWED, text=HTTPStatus.METHOD_NOT_ALLOWED.phrase)
 
     if context.ssl:
         protocol = "wss://"
