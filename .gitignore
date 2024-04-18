@@ -102,3 +102,9 @@ ENV/
 
 # Visual Studio Code
 .vscode/
+
+*.key
+*.crt
+plover_engine_server_config.json
+
+.pytest_cache/
