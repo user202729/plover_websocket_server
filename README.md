@@ -1,6 +1,6 @@
 # Plover WebSocket Server
 
-[![Python Tests](https://github.com/CosmicDNA/nacl_middleware/actions/workflows/pytest.yml/badge.svg)](https://github.com/CosmicDNA/nacl_middleware/actions/workflows/pytest.yml)
+[![Python Tests](https://github.com/user202729/nacl_middleware/actions/workflows/pytest.yml/badge.svg)](https://github.com/user202729/nacl_middleware/actions/workflows/pytest.yml)
 [![PyPI](https://img.shields.io/pypi/v/plover-engine-server-2?style=flat)](https://pypi.python.org/pypi/plover-engine-server-2/)
 
 A WebSocket server for exposing [Plover](https://github.com/openstenoproject/plover) events
