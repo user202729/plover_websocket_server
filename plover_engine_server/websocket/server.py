@@ -165,7 +165,10 @@ class WebSocketServer(EngineServer):
                 cors_middleware(
                     origins=self._remotes,
                     allow_methods=DEFAULT_ALLOW_METHODS,
-                    allow_headers=DEFAULT_ALLOW_HEADERS,
+                    allow_headers=(
+                        *DEFAULT_ALLOW_HEADERS,
+                        "ngrok-skip-browser-warning",
+                    ),
                 ),
                 nacl_middleware(
                     self._private_key, exclude_routes=("/getpublickey",), log=log
