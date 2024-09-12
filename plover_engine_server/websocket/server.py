@@ -15,7 +15,7 @@ from plover_engine_server.server import (
 )
 from plover_engine_server.websocket.routes import setup_routes
 
-from typing import TypedDict
+from typing import TypedDict, Callable
 
 class APIContext(TypedDict):
     ssl: bool
@@ -43,7 +43,7 @@ class WebSocketServer(EngineServer):
         self._ssl = ssl
         self._secretkey = secretkey
 
-    async def secret_auth_middleware(self, handler: function):
+    async def secret_auth_middleware(self, handler: Callable):
         async def middleware(request: web.Request):
             # Get the secret token from the request (you can use headers, query params, etc.)
             provided_secret = request.headers.get('X-Secret-Token')
@@ -57,7 +57,7 @@ class WebSocketServer(EngineServer):
 
         return middleware
 
-    async def context_middleware(self, handler: function):
+    async def context_middleware(self, handler: Callable):
         async def middleware(request: web.Request):
             # Inject ssl bool into the request context
             context: APIContext = {'ssl': True if (self._ssl) else False}
