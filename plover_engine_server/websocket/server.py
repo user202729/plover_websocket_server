@@ -30,7 +30,7 @@ class WebSocketServer(EngineServer):
     _ssl: SSLConfig
     _app: web.Application
     _secretkey: str
-    def __init__(self, host: str, port: str, secretkey: str, ssl: dict):
+    def __init__(self, host: str, port: str, ssl: dict, secretkey: str):
         """Initialize the server.
 
         Args:
@@ -43,7 +43,7 @@ class WebSocketServer(EngineServer):
         self._ssl = ssl
         self._secretkey = secretkey
 
-    async def secret_auth_middleware(self, handler: Callable):
+    async def secret_auth_middleware(self, app, handler: Callable):
         async def middleware(request: web.Request):
             # Get the secret token from the request (you can use headers, query params, etc.)
             provided_secret = request.headers.get('X-Secret-Token')
@@ -57,7 +57,7 @@ class WebSocketServer(EngineServer):
 
         return middleware
 
-    async def context_middleware(self, handler: Callable):
+    async def context_middleware(self, app, handler: Callable):
         async def middleware(request: web.Request):
             # Inject ssl bool into the request context
             context: APIContext = {'ssl': True if (self._ssl) else False}
