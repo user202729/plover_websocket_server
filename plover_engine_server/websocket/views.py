@@ -36,7 +36,7 @@ async def protocol(request: web.Request, context: APIContext) -> web.Response:
     return web.json_response(data)
 
 
-async def websocket_handler(request: web.Request) -> web.WebSocketResponse:
+async def websocket_handler(request: web.Request, context=None) -> web.WebSocketResponse:
     """The main WebSocket handler.
 
     Args:
