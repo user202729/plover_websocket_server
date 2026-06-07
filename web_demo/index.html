@@ -1,0 +1,1220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Plover Engine Server</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,300;0,400;0,500;0,600&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap');
+
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg-deep: #0a0c10;
+  --bg-panel: #11141a;
+  --bg-raised: #181c24;
+  --bg-input: #0d1017;
+  --border: #252a35;
+  --border-focus: #3a7bfd;
+  --text-primary: #c8cdd5;
+  --text-secondary: #6b7280;
+  --text-dim: #3e4452;
+  --accent: #3a7bfd;
+  --accent-glow: rgba(58, 123, 253, 0.15);
+  --green: #34d399;
+  --green-dim: rgba(52, 211, 153, 0.12);
+  --red: #f87171;
+  --red-dim: rgba(248, 113, 113, 0.12);
+  --amber: #fbbf24;
+  --amber-dim: rgba(251, 191, 36, 0.12);
+  --steno: #a78bfa;
+  --steno-dim: rgba(167, 139, 250, 0.1);
+  --mono: 'IBM Plex Mono', monospace;
+  --sans: 'DM Sans', system-ui, sans-serif;
+  --radius: 6px;
+  --radius-lg: 10px;
+}
+
+html { font-size: 14px; }
+body {
+  font-family: var(--sans);
+  background: var(--bg-deep);
+  color: var(--text-primary);
+  min-height: 100vh;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-dim); }
+
+/* ── Layout ── */
+.shell {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+
+.topbar-brand {
+  font-family: var(--mono);
+  font-weight: 600;
+  font-size: 0.85rem;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  white-space: nowrap;
+  user-select: none;
+}
+.topbar-brand span { color: var(--steno); }
+
+.topbar-sep {
+  width: 1px;
+  height: 20px;
+  background: var(--border);
+  flex-shrink: 0;
+}
+
+.conn-fields {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+input[type="text"], input[type="password"] {
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-primary);
+  padding: 6px 10px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+input:focus { border-color: var(--border-focus); }
+.input-url { flex: 1; min-width: 180px; }
+.input-secret { width: 140px; }
+
+button {
+  font-family: var(--sans);
+  font-size: 0.8rem;
+  font-weight: 500;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 6px 14px;
+  cursor: pointer;
+  transition: all 0.15s;
+  background: var(--bg-raised);
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+button:hover { background: var(--border); }
+button:active { transform: scale(0.97); }
+
+.btn-connect {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.btn-connect:hover { background: #2d6be6; border-color: #2d6be6; }
+.btn-connect.connected {
+  background: var(--red-dim);
+  border-color: var(--red);
+  color: var(--red);
+}
+.btn-connect.connected:hover { background: rgba(248, 113, 113, 0.2); }
+
+.conn-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+.status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--text-dim);
+  flex-shrink: 0;
+  transition: background 0.3s;
+}
+.status-dot.on { background: var(--green); box-shadow: 0 0 6px var(--green); }
+.status-dot.err { background: var(--red); }
+
+/* ── Main grid ── */
+.main {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  grid-template-rows: auto 1fr auto;
+  gap: 0;
+  overflow: hidden;
+}
+
+/* ── Status bar ── */
+.status-strip {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 8px 16px;
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--border);
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  overflow-x: auto;
+}
+
+.status-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.status-label { color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.05em; font-size: 0.7rem; }
+.status-val { color: var(--text-primary); }
+.status-val.ok { color: var(--green); }
+.status-val.off { color: var(--text-dim); }
+
+.output-toggle {
+  padding: 2px 10px;
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  border-radius: 3px;
+  cursor: pointer;
+  border: 1px solid;
+  transition: all 0.15s;
+}
+.output-toggle.active {
+  background: var(--green-dim);
+  border-color: var(--green);
+  color: var(--green);
+}
+.output-toggle.inactive {
+  background: var(--red-dim);
+  border-color: var(--red);
+  color: var(--red);
+}
+
+/* ── Tape (stroke feed) ── */
+.tape-area {
+  grid-column: 1;
+  grid-row: 2;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-right: 1px solid var(--border);
+}
+
+.tape-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-panel);
+}
+.tape-title {
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-dim);
+}
+.tape-clear {
+  font-size: 0.72rem;
+  padding: 2px 8px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-secondary);
+}
+
+.tape-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 4px 0;
+  background:
+    repeating-linear-gradient(
+      0deg,
+      transparent 0px,
+      transparent 31px,
+      var(--border) 31px,
+      var(--border) 32px
+    );
+}
+
+.tape-entry {
+  display: grid;
+  grid-template-columns: 56px 140px 1fr;
+  align-items: baseline;
+  padding: 4px 16px;
+  height: 32px;
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  animation: tape-in 0.2s ease-out;
+}
+
+@keyframes tape-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.tape-time { color: var(--text-dim); font-size: 0.72rem; }
+.tape-steno { color: var(--steno); font-weight: 500; }
+.tape-text { color: var(--text-primary); }
+.tape-meta { color: var(--text-dim); font-size: 0.75rem; font-style: italic; }
+
+.tape-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text-dim);
+  font-family: var(--mono);
+  font-size: 0.82rem;
+}
+
+/* ── Sidebar ── */
+.sidebar {
+  grid-column: 2;
+  grid-row: 2 / 4;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--bg-panel);
+}
+
+.panel {
+  border-bottom: 1px solid var(--border);
+}
+.panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  cursor: pointer;
+  user-select: none;
+}
+.panel-head:hover { background: rgba(255,255,255,0.02); }
+.panel-label {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-dim);
+}
+.panel-chevron {
+  font-size: 0.7rem;
+  color: var(--text-dim);
+  transition: transform 0.2s;
+}
+.panel.collapsed .panel-chevron { transform: rotate(-90deg); }
+.panel-body { padding: 0 14px 12px; }
+.panel.collapsed .panel-body { display: none; }
+
+/* Lookup */
+.lookup-mode-toggle {
+  display: flex;
+  margin-bottom: 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.lookup-mode-btn {
+  flex: 1;
+  padding: 5px 0;
+  font-size: 0.75rem;
+  text-align: center;
+  cursor: pointer;
+  background: transparent;
+  color: var(--text-dim);
+  border: none;
+  transition: background 0.15s, color 0.15s;
+}
+.lookup-mode-btn.active {
+  background: var(--accent);
+  color: #fff;
+}
+.lookup-input-wrap {
+  position: relative;
+  margin-bottom: 8px;
+}
+.lookup-input {
+  width: 100%;
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  padding: 8px 10px;
+}
+
+.lookup-results {
+  max-height: 200px;
+  overflow-y: auto;
+}
+.lookup-result {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.82rem;
+  animation: fade-in 0.15s ease-out;
+}
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.lookup-result:last-child { border-bottom: none; }
+.lookup-word { color: var(--text-primary); }
+.lookup-outline { font-family: var(--mono); color: var(--steno); font-size: 0.78rem; }
+.lookup-dict {
+  width: 100%;
+  font-size: 0.7rem;
+  color: var(--text-dim);
+  opacity: 0.7;
+}
+.lookup-empty { color: var(--text-dim); font-size: 0.8rem; padding: 8px 0; }
+
+/* Actions */
+.action-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.action-group:last-child { margin-bottom: 0; }
+.action-label {
+  font-size: 0.72rem;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-family: var(--mono);
+}
+
+.action-row {
+  display: flex;
+  gap: 6px;
+}
+.action-row input {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.82rem;
+  padding: 5px 8px;
+}
+.action-row button {
+  font-size: 0.75rem;
+  padding: 5px 10px;
+}
+.btn-send {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.btn-send:hover { background: #2d6be6; }
+
+.action-btns {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.action-btns button { flex: 1; font-size: 0.75rem; padding: 5px 6px; }
+
+/* Dict selector */
+.dict-select {
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-primary);
+  padding: 4px 8px;
+  width: 100%;
+  outline: none;
+  margin-bottom: 4px;
+}
+.dict-select:focus { border-color: var(--border-focus); }
+.dict-select option { background: var(--bg-panel); color: var(--text-primary); }
+
+/* Event log */
+.eventlog-area {
+  grid-column: 1;
+  grid-row: 3;
+  border-right: 1px solid var(--border);
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  max-height: 220px;
+  transition: max-height 0.25s ease;
+}
+.eventlog-area.collapsed { max-height: 34px; }
+.eventlog-area.collapsed .eventlog-scroll { display: none; }
+
+.eventlog-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px;
+  background: var(--bg-panel);
+  cursor: pointer;
+  user-select: none;
+  flex-shrink: 0;
+}
+.eventlog-head:hover { background: rgba(255,255,255,0.02); }
+
+.eventlog-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.eventlog-title-text {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-dim);
+}
+.eventlog-badge {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  background: var(--bg-raised);
+  color: var(--text-dim);
+  padding: 1px 6px;
+  border-radius: 3px;
+  min-width: 20px;
+  text-align: center;
+}
+.eventlog-chevron {
+  font-size: 0.7rem;
+  color: var(--text-dim);
+  transition: transform 0.2s;
+}
+.eventlog-area.collapsed .eventlog-chevron { transform: rotate(-90deg); }
+
+.eventlog-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 2px 0;
+  background: var(--bg-deep);
+}
+
+.log-entry {
+  display: grid;
+  grid-template-columns: 72px 130px 1fr;
+  gap: 8px;
+  padding: 3px 16px;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  line-height: 1.6;
+  animation: fade-in 0.1s;
+}
+.log-time { color: var(--text-dim); }
+.log-type { color: var(--amber); font-weight: 500; overflow: hidden; text-overflow: ellipsis; }
+.log-data { color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ── Dictionaries panel ── */
+.dict-list {
+  max-height: 150px;
+  overflow-y: auto;
+}
+.dict-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 0;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  border-bottom: 1px solid var(--border);
+  animation: fade-in 0.15s;
+}
+.dict-item:last-child { border-bottom: none; }
+.dict-dot {
+  width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0;
+}
+.dict-dot.on { background: var(--green); }
+.dict-dot.off { background: var(--text-dim); }
+.dict-dot.err { background: var(--red); }
+.dict-path {
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  direction: rtl;
+  text-align: left;
+}
+.dict-flags { color: var(--text-dim); white-space: nowrap; margin-left: auto; }
+
+/* ── Responsive ── */
+@media (max-width: 820px) {
+  .main {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr auto auto;
+  }
+  .sidebar {
+    grid-column: 1;
+    grid-row: 4;
+    max-height: 300px;
+    overflow-y: auto;
+    border-top: 1px solid var(--border);
+  }
+  .tape-area { border-right: none; }
+  .eventlog-area { border-right: none; }
+}
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <!-- Top bar -->
+  <div class="topbar">
+    <div class="topbar-brand"><span>PLOVER</span> ENGINE SERVER</div>
+    <div class="topbar-sep"></div>
+    <div class="conn-fields">
+      <input type="text" class="input-url" id="wsUrl" value="ws://localhost:8086/websocket" placeholder="ws://host:port/websocket">
+      <input type="password" class="input-secret" id="wsSecret" placeholder="Secret key">
+      <button class="btn-connect" id="btnConnect">Connect</button>
+    </div>
+    <div class="conn-status">
+      <span class="status-dot" id="statusDot"></span>
+      <span id="statusText">Disconnected</span>
+    </div>
+  </div>
+
+  <!-- Main area -->
+  <div class="main">
+
+    <!-- Status strip -->
+    <div class="status-strip">
+      <div class="status-item">
+        <span class="status-label">Machine</span>
+        <span class="status-val" id="machineType">--</span>
+      </div>
+      <div class="status-item">
+        <span class="status-label">State</span>
+        <span class="status-val" id="machineState">--</span>
+      </div>
+      <div class="status-item">
+        <span class="status-label">Output</span>
+        <button class="output-toggle inactive" id="outputToggle">OFF</button>
+      </div>
+    </div>
+
+    <!-- Tape (stroke feed) -->
+    <div class="tape-area">
+      <div class="tape-header">
+        <span class="tape-title">Stroke Feed</span>
+        <button class="tape-clear" id="tapeClear">Clear</button>
+      </div>
+      <div class="tape-scroll" id="tapeScroll">
+        <div class="tape-empty" id="tapeEmpty">Waiting for strokes...</div>
+      </div>
+    </div>
+
+    <!-- Event log -->
+    <div class="eventlog-area" id="eventlogArea">
+      <div class="eventlog-head" id="eventlogHead">
+        <div class="eventlog-title">
+          <span class="eventlog-title-text">Event Log</span>
+          <span class="eventlog-badge" id="eventCount">0</span>
+        </div>
+        <span class="eventlog-chevron">&#9660;</span>
+      </div>
+      <div class="eventlog-scroll" id="eventlogScroll"></div>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+
+      <!-- Lookup -->
+      <div class="panel" id="panelLookup">
+        <div class="panel-head" data-panel="panelLookup">
+          <span class="panel-label">Dictionary Lookup</span>
+          <span class="panel-chevron">&#9660;</span>
+        </div>
+        <div class="panel-body">
+          <div class="lookup-mode-toggle">
+            <button class="lookup-mode-btn active" data-mode="translation">Translation</button>
+            <button class="lookup-mode-btn" data-mode="stroke">Stroke</button>
+          </div>
+          <div class="lookup-input-wrap">
+            <input type="text" class="lookup-input" id="lookupInput" placeholder="Type a word to look up...">
+          </div>
+          <div class="lookup-results" id="lookupResults"></div>
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div class="panel" id="panelActions">
+        <div class="panel-head" data-panel="panelActions">
+          <span class="panel-label">Actions</span>
+          <span class="panel-chevron">&#9660;</span>
+        </div>
+        <div class="panel-body">
+          <div class="action-group">
+            <span class="action-label">Inject Translation</span>
+            <div class="action-row">
+              <input type="text" id="inputTranslation" placeholder="hello">
+              <button class="btn-send" id="btnSendTranslation">Send</button>
+            </div>
+          </div>
+          <div class="action-group">
+            <span class="action-label">Inject Stroke</span>
+            <div class="action-row">
+              <input type="text" id="inputStroke" placeholder="S-, T-">
+              <button class="btn-send" id="btnSendStroke">Send</button>
+            </div>
+          </div>
+          <div class="action-group">
+            <span class="action-label">Add Dictionary Entry</span>
+            <select id="dictSelect" class="dict-select">
+              <option value="">First writable dictionary</option>
+            </select>
+            <div class="action-row">
+              <input type="text" id="inputAddStrokes" placeholder="Strokes" style="flex:0.5">
+              <input type="text" id="inputAddTranslation" placeholder="Translation">
+              <button class="btn-send" id="btnAddEntry">Add</button>
+            </div>
+          </div>
+          <div class="action-group">
+            <span class="action-label">Engine Control</span>
+            <div class="action-btns">
+              <button id="btnToggleOutput">Toggle Output</button>
+              <button id="btnResetState" title="Reset the translation stack (next stroke starts fresh)">Reset</button>
+              <button id="btnUndoAll" title="Backspace out all stacked translations, then reset">Undo All</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Dictionaries -->
+      <div class="panel collapsed" id="panelDicts">
+        <div class="panel-head" data-panel="panelDicts">
+          <span class="panel-label">Dictionaries</span>
+          <span class="panel-chevron">&#9660;</span>
+        </div>
+        <div class="panel-body">
+          <div class="dict-list" id="dictList">
+            <div class="lookup-empty">Connect to view dictionaries</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<script>
+(() => {
+  // -- State --
+  let ws = null;
+  let queryId = 0;
+  let eventCount = 0;
+  const pending = {};
+  let dictionaries = [];
+
+  // Tape buffering: server sends send_string before stroked,
+  // so we buffer output text and attach it to the next stroke entry.
+  let pendingOutput = '';
+  let pendingOutputTimer = null;
+
+  // -- Elements --
+  const $ = id => document.getElementById(id);
+  const wsUrl = $('wsUrl');
+  const wsSecret = $('wsSecret');
+  const btnConnect = $('btnConnect');
+  const statusDot = $('statusDot');
+  const statusText = $('statusText');
+  const machineType = $('machineType');
+  const machineState = $('machineState');
+  const outputToggle = $('outputToggle');
+  const tapeScroll = $('tapeScroll');
+  const tapeEmpty = $('tapeEmpty');
+  const tapeClear = $('tapeClear');
+  const eventlogArea = $('eventlogArea');
+  const eventlogHead = $('eventlogHead');
+  const eventlogScroll = $('eventlogScroll');
+  const eventCountEl = $('eventCount');
+  const lookupInput = $('lookupInput');
+  const lookupResults = $('lookupResults');
+  const dictList = $('dictList');
+  const dictSelect = $('dictSelect');
+
+  // -- Helpers --
+  function now() {
+    const d = new Date();
+    return d.toLocaleTimeString('en', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  }
+
+  function nextId() { return String(++queryId); }
+
+  function send(msg) {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify(msg));
+    }
+  }
+
+  function query(msg) {
+    return new Promise((resolve) => {
+      const id = nextId();
+      msg.id = id;
+      pending[id] = { resolve, timer: setTimeout(() => {
+        delete pending[id];
+        resolve(null);
+      }, 5000) };
+      send(msg);
+    });
+  }
+
+  function setConnected(state) {
+    if (state) {
+      statusDot.className = 'status-dot on';
+      statusText.textContent = 'Connected';
+      btnConnect.textContent = 'Disconnect';
+      btnConnect.classList.add('connected');
+    } else {
+      statusDot.className = 'status-dot';
+      statusText.textContent = 'Disconnected';
+      btnConnect.textContent = 'Connect';
+      btnConnect.classList.remove('connected');
+      machineType.textContent = '--';
+      machineState.textContent = '--';
+      machineState.className = 'status-val';
+      setOutputDisplay(null);
+    }
+  }
+
+  function setOutputDisplay(enabled) {
+    if (enabled === null || enabled === undefined) {
+      outputToggle.textContent = '--';
+      outputToggle.className = 'output-toggle inactive';
+      return;
+    }
+    outputToggle.textContent = enabled ? 'ON' : 'OFF';
+    outputToggle.className = enabled ? 'output-toggle active' : 'output-toggle inactive';
+  }
+
+  // -- Tape output buffering --
+  function bufferOutput(text) {
+    pendingOutput += text;
+    clearTimeout(pendingOutputTimer);
+    pendingOutputTimer = setTimeout(flushPendingOutput, 150);
+  }
+
+  function flushPendingOutput() {
+    if (pendingOutput) {
+      addTapeEntry('', pendingOutput);
+      pendingOutput = '';
+    }
+  }
+
+  function consumePendingOutput() {
+    clearTimeout(pendingOutputTimer);
+    const text = pendingOutput;
+    pendingOutput = '';
+    return text;
+  }
+
+  // -- Tape entries --
+  function addTapeEntry(steno, text) {
+    tapeEmpty.style.display = 'none';
+    const el = document.createElement('div');
+    el.className = 'tape-entry';
+
+    const timeEl = document.createElement('span');
+    timeEl.className = 'tape-time';
+    timeEl.textContent = now();
+
+    const stenoEl = document.createElement('span');
+    stenoEl.className = 'tape-steno';
+    stenoEl.textContent = steno;
+
+    const textEl = document.createElement('span');
+    textEl.className = 'tape-text';
+    textEl.textContent = text;
+
+    el.append(timeEl, stenoEl, textEl);
+    tapeScroll.appendChild(el);
+    tapeScroll.scrollTop = tapeScroll.scrollHeight;
+
+    while (tapeScroll.children.length > 501) {
+      tapeScroll.removeChild(tapeScroll.children[1]);
+    }
+  }
+
+  // -- Event log --
+  function logEvent(type, data) {
+    eventCount++;
+    eventCountEl.textContent = eventCount;
+
+    const el = document.createElement('div');
+    el.className = 'log-entry';
+
+    const timeEl = document.createElement('span');
+    timeEl.className = 'log-time';
+    timeEl.textContent = now();
+
+    const typeEl = document.createElement('span');
+    typeEl.className = 'log-type';
+    typeEl.textContent = type;
+
+    const dataEl = document.createElement('span');
+    dataEl.className = 'log-data';
+    dataEl.textContent = typeof data === 'string' ? data : JSON.stringify(data);
+    dataEl.title = dataEl.textContent;
+
+    el.append(timeEl, typeEl, dataEl);
+    eventlogScroll.appendChild(el);
+    eventlogScroll.scrollTop = eventlogScroll.scrollHeight;
+
+    while (eventlogScroll.children.length > 500) {
+      eventlogScroll.removeChild(eventlogScroll.firstChild);
+    }
+  }
+
+  // -- Connection --
+  function connect() {
+    if (ws) { ws.close(); return; }
+
+    const url = wsUrl.value.trim();
+    if (!url) return;
+
+    statusDot.className = 'status-dot';
+    statusText.textContent = 'Connecting...';
+
+    ws = new WebSocket(url);
+
+    ws.onopen = async () => {
+      setConnected(true);
+      logEvent('system', 'Connected to ' + url);
+
+      const [ms, out] = await Promise.all([
+        query({ get_machine_state: true }),
+        query({ get_output: true }),
+      ]);
+
+      if (ms && ms.get_machine_state) {
+        machineType.textContent = ms.get_machine_state.type || '--';
+        machineState.textContent = ms.get_machine_state.state || '--';
+        if (ms.get_machine_state.state === 'connected') machineState.className = 'status-val ok';
+      }
+      if (out && out.get_output !== undefined) {
+        setOutputDisplay(out.get_output);
+      }
+
+      const dres = await query({ get_dictionaries: true });
+      if (dres && dres.get_dictionaries) {
+        dictionaries = dres.get_dictionaries;
+        renderDicts(dictionaries);
+        renderDictSelect(dictionaries);
+      }
+    };
+
+    ws.onmessage = (ev) => {
+      let data;
+      try { data = JSON.parse(ev.data); } catch { return; }
+
+      if (data.id && pending[data.id]) {
+        clearTimeout(pending[data.id].timer);
+        pending[data.id].resolve(data);
+        delete pending[data.id];
+        return;
+      }
+
+      // Output events: buffer until a stroked event combines them.
+      // Server sends send_string/send_backspaces BEFORE stroked.
+      if ('send_string' in data) {
+        bufferOutput(data.send_string);
+        logEvent('send_string', data.send_string);
+      }
+
+      if ('send_backspaces' in data) {
+        bufferOutput('⌫' + data.send_backspaces + ' ');
+        logEvent('send_backspaces', data.send_backspaces);
+      }
+
+      if ('send_key_combination' in data) {
+        bufferOutput('[' + data.send_key_combination + '] ');
+        logEvent('send_key_combination', data.send_key_combination);
+      }
+
+      // Stroked arrives after output events -- combine them into one row.
+      if ('stroked' in data) {
+        const text = consumePendingOutput();
+        addTapeEntry(data.rtfcre || '???', text);
+        logEvent('stroked', data.rtfcre);
+      }
+
+      if ('translated' in data) {
+        logEvent('translated', data.translated);
+      }
+
+      if ('machine_state_changed' in data) {
+        const ms = data.machine_state_changed;
+        machineType.textContent = ms.machine_type || '--';
+        machineState.textContent = ms.machine_state || '--';
+        machineState.className = ms.machine_state === 'connected' ? 'status-val ok' : 'status-val';
+        logEvent('machine_state_changed', ms);
+      }
+
+      if ('output_changed' in data) {
+        setOutputDisplay(data.output_changed);
+        logEvent('output_changed', data.output_changed);
+      }
+
+      if ('config_changed' in data) logEvent('config_changed', data.config_changed);
+      if ('dictionaries_loaded' in data) {
+        logEvent('dictionaries_loaded', '');
+        query({ get_dictionaries: true }).then(r => {
+          if (r && r.get_dictionaries) {
+            dictionaries = r.get_dictionaries;
+            renderDicts(dictionaries);
+            renderDictSelect(dictionaries);
+          }
+        });
+      }
+      if ('dictionary_state_changed' in data) logEvent('dictionary_state_changed', data.dictionary_state_changed);
+      if ('add_translation' in data) logEvent('add_translation', '');
+      if ('focus' in data) logEvent('focus', '');
+      if ('configure' in data) logEvent('configure', '');
+      if ('lookup' in data) logEvent('lookup', '');
+      if ('suggestions' in data) logEvent('suggestions', '');
+      if ('quit' in data) logEvent('quit', '');
+    };
+
+    ws.onclose = () => {
+      ws = null;
+      setConnected(false);
+      logEvent('system', 'Disconnected');
+    };
+
+    ws.onerror = () => {
+      statusDot.className = 'status-dot err';
+      statusText.textContent = 'Error';
+      logEvent('system', 'Connection error');
+    };
+  }
+
+  // -- Dictionaries --
+  function renderDicts(dicts) {
+    dictList.innerHTML = '';
+    if (!dicts.length) {
+      dictList.innerHTML = '<div class="lookup-empty">No dictionaries loaded</div>';
+      return;
+    }
+    for (const d of dicts) {
+      const el = document.createElement('div');
+      el.className = 'dict-item';
+
+      const dot = document.createElement('span');
+      dot.className = 'dict-dot ' + (d.errored ? 'err' : d.enabled ? 'on' : 'off');
+
+      const path = document.createElement('span');
+      path.className = 'dict-path';
+      path.textContent = d.path.split('/').pop();
+      path.title = d.path;
+
+      const flags = document.createElement('span');
+      flags.className = 'dict-flags';
+      const parts = [];
+      if (d.readonly) parts.push('ro');
+      if (d.errored) parts.push('err');
+      if (!d.enabled) parts.push('off');
+      flags.textContent = parts.join(', ');
+
+      el.append(dot, path, flags);
+      dictList.appendChild(el);
+    }
+  }
+
+  function renderDictSelect(dicts) {
+    dictSelect.innerHTML = '<option value="">First writable dictionary</option>';
+    for (const d of dicts) {
+      if (d.readonly || d.errored || !d.enabled) continue;
+      const opt = document.createElement('option');
+      opt.value = d.path;
+      opt.textContent = d.path.split('/').pop();
+      opt.title = d.path;
+      dictSelect.appendChild(opt);
+    }
+  }
+
+  // -- Lookup --
+  let lookupTimer = null;
+  let lookupMode = 'translation';
+
+  function dictName(path) {
+    return path ? path.split('/').pop().split('\\').pop() : '';
+  }
+
+  function appendResult(word, outline, dictPath) {
+    const el = document.createElement('div');
+    el.className = 'lookup-result';
+
+    const wordSpan = document.createElement('span');
+    wordSpan.className = 'lookup-word';
+    wordSpan.textContent = word;
+
+    const stenoSpan = document.createElement('span');
+    stenoSpan.className = 'lookup-outline';
+    stenoSpan.textContent = outline;
+
+    el.append(wordSpan, stenoSpan);
+
+    if (dictPath) {
+      const dictSpan = document.createElement('span');
+      dictSpan.className = 'lookup-dict';
+      dictSpan.textContent = dictName(dictPath);
+      dictSpan.title = dictPath;
+      el.appendChild(dictSpan);
+    }
+
+    lookupResults.appendChild(el);
+  }
+
+  for (const btn of document.querySelectorAll('.lookup-mode-btn')) {
+    btn.addEventListener('click', () => {
+      document.querySelector('.lookup-mode-btn.active').classList.remove('active');
+      btn.classList.add('active');
+      lookupMode = btn.dataset.mode;
+      lookupInput.placeholder = lookupMode === 'stroke'
+        ? 'Type a stroke to look up (e.g. TEFT)...'
+        : 'Type a word to look up...';
+      lookupInput.value = '';
+      lookupResults.innerHTML = '';
+    });
+  }
+
+  lookupInput.addEventListener('input', () => {
+    clearTimeout(lookupTimer);
+    const text = lookupInput.value.trim();
+    if (!text || !ws) {
+      lookupResults.innerHTML = '';
+      return;
+    }
+    lookupTimer = setTimeout(async () => {
+      lookupResults.innerHTML = '';
+
+      if (lookupMode === 'stroke') {
+        const strokes = text.split('/').map(s => s.trim()).filter(Boolean);
+        const res = await query({ lookup_from_all: strokes });
+        const entries = res && res.lookup_from_all;
+        if (entries && entries.length) {
+          for (const e of entries) {
+            appendResult(e.translation, strokes.join('/'), e.dict_path);
+          }
+        } else {
+          lookupResults.innerHTML = '<div class="lookup-empty">No results</div>';
+        }
+      } else {
+        const res = await query({ reverse_lookup_with_dicts: text });
+        const entries = res && res.reverse_lookup_with_dicts;
+        if (entries && entries.length) {
+          for (const e of entries) {
+            appendResult(text, e.outline.join('/'), e.dict_path);
+          }
+        } else {
+          lookupResults.innerHTML = '<div class="lookup-empty">No results</div>';
+        }
+      }
+    }, 250);
+  });
+
+  // -- Actions --
+  $('btnSendTranslation').addEventListener('click', () => {
+    const val = $('inputTranslation').value.trim();
+    if (val) send({ translation: val, forced: true });
+  });
+  $('inputTranslation').addEventListener('keydown', e => {
+    if (e.key === 'Enter') $('btnSendTranslation').click();
+  });
+
+  $('btnSendStroke').addEventListener('click', () => {
+    const val = $('inputStroke').value.trim();
+    if (val) send({
+      stroke: val.split(',').map(s => s.trim()).filter(Boolean),
+      forced: true,
+      zero_last_stroke_length: true,
+    });
+  });
+  $('inputStroke').addEventListener('keydown', e => {
+    if (e.key === 'Enter') $('btnSendStroke').click();
+  });
+
+  $('btnAddEntry').addEventListener('click', () => {
+    const strokes = $('inputAddStrokes').value.trim();
+    const translation = $('inputAddTranslation').value.trim();
+    if (strokes && translation) {
+      const msg = {
+        add_translation: {
+          strokes: strokes.split(',').map(s => s.trim()).filter(Boolean),
+          translation: translation,
+        }
+      };
+      if (dictSelect.value) msg.add_translation.dictionary_path = dictSelect.value;
+      send(msg);
+    }
+  });
+
+  $('btnToggleOutput').addEventListener('click', () => send({ toggle_output: true }));
+  $('btnResetState').addEventListener('click', () => send({ clear_translator_state: false }));
+  $('btnUndoAll').addEventListener('click', () => send({ clear_translator_state: true }));
+
+  outputToggle.addEventListener('click', () => {
+    if (!ws) return;
+    const current = outputToggle.textContent === 'ON';
+    send({ set_output: !current });
+  });
+
+  // -- Connect button --
+  btnConnect.addEventListener('click', connect);
+
+  // -- Clear tape --
+  tapeClear.addEventListener('click', () => {
+    tapeScroll.innerHTML = '';
+    const empty = document.createElement('div');
+    empty.className = 'tape-empty';
+    empty.id = 'tapeEmpty';
+    empty.textContent = 'Waiting for strokes...';
+    tapeScroll.appendChild(empty);
+  });
+
+  // -- Panel toggles --
+  document.querySelectorAll('.panel-head').forEach(head => {
+    head.addEventListener('click', () => {
+      const panel = document.getElementById(head.dataset.panel);
+      if (panel) panel.classList.toggle('collapsed');
+    });
+  });
+
+  // -- Event log toggle --
+  eventlogHead.addEventListener('click', () => {
+    eventlogArea.classList.toggle('collapsed');
+  });
+
+  // -- Enter to connect --
+  wsUrl.addEventListener('keydown', e => { if (e.key === 'Enter') connect(); });
+  wsSecret.addEventListener('keydown', e => { if (e.key === 'Enter') connect(); });
+})();
+</script>
+</body>
+</html>

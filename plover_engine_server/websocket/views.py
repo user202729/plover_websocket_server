@@ -1,42 +1,23 @@
 """The views / handlers for the server."""
 
-from aiohttp import web, WSMsgType
 import asyncio
+import json
+import traceback
+
+from aiohttp import web, WSMsgType
 from plover import log
-from http import HTTPStatus
-from plover_engine_server.websocket.server import APIContext
+
 
 async def index(request: web.Request) -> web.Response:
-    """Index endpoint for the server. Not really needed.
-
-    Args:
-        request: The request from the client.
-    """
-
     return web.Response(text='index')
 
-async def protocol(request: web.Request, context: APIContext) -> web.Response:
-    """Route to get the protocol of the web server.
 
-    Args:
-        request: The request from the client.
-    """
-    if request.method != 'GET':
-        return web.Response(status=HTTPStatus.METHOD_NOT_ALLOWED, text=HTTPStatus.METHOD_NOT_ALLOWED.phrase)
-
-    if context.ssl:
-        protocol = "wss://"
-    else:
-        protocol = "ws://"
-
-    data = {
-        "protocol": protocol
-    }
-
-    return web.json_response(data)
+async def protocol(request: web.Request) -> web.Response:
+    proto = "wss://" if request.app['ssl'] else "ws://"
+    return web.json_response({"protocol": proto})
 
 
-async def websocket_handler(request: web.Request, context=None) -> web.WebSocketResponse:
+async def websocket_handler(request: web.Request) -> web.WebSocketResponse:
     """The main WebSocket handler.
 
     Args:
@@ -57,8 +38,7 @@ async def websocket_handler(request: web.Request, context=None) -> web.WebSocket
                     await socket.close()
                     continue
 
-                import json
-                try:  # NOTE is this good API? What if message is not JSON/dict?
+                try:
                     data = json.loads(message.data)
                 except json.decoder.JSONDecodeError:
                     log.info(f'Receive unknown data: {message.data}')
@@ -67,9 +47,10 @@ async def websocket_handler(request: web.Request, context=None) -> web.WebSocket
                 if isinstance(data, dict):
                     callback = request.app['on_message_callback']
                     try:
-                        callback(data)
+                        response = callback(data)
+                        if response is not None:
+                            await socket.send_json(response)
                     except:
-                        import traceback
                         traceback.print_exc()
 
             elif message.type == WSMsgType.ERROR:
