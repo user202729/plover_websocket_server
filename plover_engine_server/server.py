@@ -107,10 +107,12 @@ class EngineServer:
         self._callbacks.append(callback)
 
     def _on_message(self, data: dict):
-        """Stuff stuff. Subclasses should call this function on message received.
+        """Dispatches received data to registered callbacks.
 
-        Args:
-            data: The received data.
+        Returns the first non-None response from a callback, or None.
         """
         for callback in self._callbacks:
-            callback(data)
+            response = callback(data)
+            if response is not None:
+                return response
+        return None

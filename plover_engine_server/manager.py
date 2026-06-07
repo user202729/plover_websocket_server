@@ -1,28 +1,26 @@
 """The middleman between Plover and the server."""
 
-from typing import Optional, List
-import os
 import json
+import os
+import traceback
+from typing import Optional
 
 import jsonpickle
 
 from plover import log
-from plover.engine import StenoEngine
+from plover.engine import StenoEngine, ErroredDictionary
 from plover.steno import Stroke
-from plover.config import Config
 from plover.oslayer.config import CONFIG_DIR
 from plover.formatting import _Action
 from plover.steno_dictionary import StenoDictionaryCollection
+from plover.translation import _mapping_to_macro, Translation
 
 from plover_engine_server.errors import (
     ERROR_MISSING_ENGINE,
     ERROR_SERVER_RUNNING,
-    ERROR_NO_SERVER
+    ERROR_NO_SERVER,
 )
-from plover_engine_server.server import (
-    EngineServer,
-    ServerStatus
-)
+from plover_engine_server.server import EngineServer, ServerStatus
 from plover_engine_server.websocket.server import WebSocketServer
 from plover_engine_server.config import ServerConfig
 
@@ -30,7 +28,29 @@ from plover_engine_server.config import ServerConfig
 SERVER_CONFIG_FILE = 'plover_engine_server_config.json'
 
 
-class EngineServerManager():
+class _NoOpOutput:
+    """Swapped in for keyboard emulation during injected strokes/translations.
+    Hooks still fire (WebSocket clients see events), but no keys are typed
+    into the OS, which prevents feedback loops with the Keyboard machine."""
+    def send_string(self, s): pass
+    def send_backspaces(self, n): pass
+    def send_key_combination(self, c): pass
+
+QUERY_KEYS = frozenset({
+    'lookup',
+    'lookup_from_all',
+    'reverse_lookup',
+    'reverse_lookup_with_dicts',
+    'casereverse_lookup',
+    'get_suggestions',
+    'get_dictionaries',
+    'get_machine_state',
+    'get_output',
+    'get_config',
+})
+
+
+class EngineServerManager:
     """Manages a server that exposes the Plover engine."""
 
     def __init__(self, engine: StenoEngine):
@@ -49,13 +69,16 @@ class EngineServerManager():
         if self.get_server_status() != ServerStatus.Stopped:
             raise AssertionError(ERROR_SERVER_RUNNING)
 
-        self._config = ServerConfig(self._config_path)  # reload the configuration when the server is restarted
+        self._config = ServerConfig(self._config_path)
 
-        self._server = WebSocketServer(self._config.host, self._config.port, self._config.ssl, self._config.secretkey)
+        self._server = WebSocketServer(
+            self._config.host,
+            self._config.port,
+            self._config.ssl,
+            self._config.secretkey,
+        )
         self._server.register_message_callback(self._on_message)
         self._server.start()
-
-        # TODO: Wait until the server actually starts before connecting hooks
         self._connect_hooks()
 
     def stop(self):
@@ -69,7 +92,6 @@ class EngineServerManager():
             raise AssertionError(ERROR_NO_SERVER)
 
         self._disconnect_hooks()
-
         self._server.queue_stop()
         log.info("Joining server thread...")
         self._server.join()
@@ -85,78 +107,216 @@ class EngineServerManager():
 
         return self._server.status if self._server else ServerStatus.Stopped
 
+    # ── Incoming message handling ──────────────────────────────────────
+
     def _on_message(self, data: dict):
         with self._engine:
+            response = {}
+
             forced_on = False
             if data.get('forced') and not self._engine._is_running:
                 forced_on = True
                 self._engine._is_running = True
 
-            if data.get('zero_last_stroke_length'):
-                self._engine._machine._last_stroke_key_down_count = 0
-                self._engine._machine._stroke_key_down_count = 0
+            try:
+                self._handle_actions(data)
+                self._handle_queries(data, response)
+            finally:
+                if forced_on:
+                    self._engine._is_running = False
 
-            import traceback
+            if response:
+                if 'id' in data:
+                    response['id'] = data['id']
+                return response
+            return None
 
-            if 'stroke' in data:
-                steno_keys = data['stroke']
-                if isinstance(steno_keys, list):
-                    try:
-                        self._engine._machine_stroke_callback(steno_keys)
-                    except:
-                        traceback.print_exc()
+    def _handle_actions(self, data: dict):
+        if data.get('zero_last_stroke_length'):
+            self._engine._machine._last_stroke_key_down_count = 0
+            self._engine._machine._stroke_key_down_count = 0
 
-            if 'translation' in data:
-                mapping = data['translation']
-                if isinstance(mapping, str):
-                    try:
-                        from plover.steno import Stroke
-                        from plover.translation import _mapping_to_macro, Translation
-                        stroke = Stroke([]) # required, because otherwise Plover will try to merge the outlines together
-						# and the outline [] (instead of [Stroke([])]) can be merged to anything
-                        macro = _mapping_to_macro(mapping, stroke)
-                        if macro is not None:
-                            self._engine._translator.translate_macro(macro)
-                            return
-                        t = (
-                            #self._engine._translator._find_translation_helper(stroke) or
-                            #self._engine._translator._find_translation_helper(stroke, system.SUFFIX_KEYS) or
-                            Translation([stroke], mapping)
-                        )
-                        self._engine._translator.translate_translation(t)
-                        self._engine._translator.flush()
-                        #self._engine._trigger_hook('stroked', stroke)
-                    except:
-                        traceback.print_exc()
+        if 'stroke' in data or 'translation' in data:
+            real_kbd = self._engine._keyboard_emulation
+            self._engine._keyboard_emulation = _NoOpOutput()
+            try:
+                self._inject_stroke(data)
+                self._inject_translation(data)
+            finally:
+                self._engine._keyboard_emulation = real_kbd
 
-            if forced_on:
-                self._engine._is_running = False
+        if 'set_output' in data:
+            self._engine._set_output(bool(data['set_output']))
+
+        if 'toggle_output' in data:
+            self._engine._toggle_output()
+
+        if 'add_translation' in data:
+            params = data['add_translation']
+            if isinstance(params, dict):
+                strokes = tuple(params.get('strokes', ()))
+                translation = params.get('translation', '')
+                dictionary_path = params.get('dictionary_path')
+                self._engine.add_translation(strokes, translation, dictionary_path)
+
+        if 'clear_translator_state' in data:
+            undo = bool(data['clear_translator_state'])
+            self._engine.clear_translator_state(undo=undo)
+
+    def _inject_stroke(self, data: dict):
+        if 'stroke' not in data:
+            return
+        steno_keys = data['stroke']
+        if isinstance(steno_keys, list):
+            try:
+                stroke = Stroke(steno_keys)
+                self._engine._translator.translate(stroke)
+                self._engine._trigger_hook("stroked", stroke)
+            except:
+                traceback.print_exc()
+
+    def _inject_translation(self, data: dict):
+        if 'translation' not in data:
+            return
+        mapping = data['translation']
+        if isinstance(mapping, str):
+            try:
+                stroke = Stroke([])
+                macro = _mapping_to_macro(mapping, stroke)
+                if macro is not None:
+                    self._engine._translator.translate_macro(macro)
+                else:
+                    t = Translation([stroke], mapping)
+                    self._engine._translator.translate_translation(t)
+                    self._engine._translator.flush()
+            except:
+                traceback.print_exc()
+
+    def _handle_queries(self, data: dict, response: dict):
+        if not data.keys() & QUERY_KEYS:
+            return
+
+        if 'lookup' in data:
+            outline = data['lookup']
+            if isinstance(outline, list):
+                response['lookup'] = self._engine.lookup(tuple(outline))
+
+        if 'lookup_from_all' in data:
+            outline = data['lookup_from_all']
+            if isinstance(outline, list):
+                results = self._engine.dictionaries.lookup_from_all(
+                    tuple(outline),
+                )
+                response['lookup_from_all'] = [
+                    {
+                        'translation': value,
+                        'dict_path': d.path,
+                    }
+                    for value, d in (results or [])
+                    if value.lower() != '{plover:deleted}'
+                ]
+
+        if 'reverse_lookup' in data:
+            text = data['reverse_lookup']
+            if isinstance(text, str):
+                results = self._engine.reverse_lookup(text)
+                response['reverse_lookup'] = [
+                    list(outline) for outline in results
+                ] if results else []
+
+        if 'reverse_lookup_with_dicts' in data:
+            text = data['reverse_lookup_with_dicts']
+            if isinstance(text, str):
+                dicts = self._engine.dictionaries
+                valid_outlines = dicts.reverse_lookup(text)
+                results = []
+                for outline in valid_outlines:
+                    for d in dicts.dicts:
+                        if not d.enabled:
+                            continue
+                        if d.get(outline) is not None:
+                            results.append({
+                                'outline': list(outline),
+                                'dict_path': d.path,
+                            })
+                            break
+                response['reverse_lookup_with_dicts'] = results
+
+        if 'casereverse_lookup' in data:
+            text = data['casereverse_lookup']
+            if isinstance(text, str):
+                results = self._engine.casereverse_lookup(text)
+                response['casereverse_lookup'] = [
+                    list(outline) for outline in results
+                ] if results else []
+
+        if 'get_suggestions' in data:
+            text = data['get_suggestions']
+            if isinstance(text, str):
+                suggestions = self._engine.get_suggestions(text)
+                response['get_suggestions'] = [
+                    {
+                        'text': s.text,
+                        'steno_list': [
+                            list(outline) for outline in s.steno_list
+                        ],
+                    }
+                    for s in suggestions
+                ]
+
+        if 'get_dictionaries' in data:
+            dicts = self._engine.dictionaries
+            response['get_dictionaries'] = [
+                {
+                    'path': d.path,
+                    'enabled': d.enabled,
+                    'readonly': d.readonly,
+                    'errored': isinstance(d, ErroredDictionary),
+                }
+                for d in dicts.dicts
+            ]
+
+        if 'get_machine_state' in data:
+            response['get_machine_state'] = {
+                'type': (
+                    self._engine._machine_params.type
+                    if self._engine._machine_params else None
+                ),
+                'state': self._engine.machine_state,
+            }
+
+        if 'get_output' in data:
+            response['get_output'] = self._engine.output
+
+        if 'get_config' in data:
+            config_json = jsonpickle.encode(
+                self._engine.config, unpicklable=False,
+            )
+            response['get_config'] = json.loads(config_json)
+
+    # ── Hook management ────────────────────────────────────────────────
 
     def _connect_hooks(self):
         """Creates hooks into all of Plover's events."""
 
         if not self._engine:
             raise AssertionError(ERROR_MISSING_ENGINE)
-
         for hook in self._engine.HOOKS:
-            try:
-                callback = getattr(self, f'_on_{hook}')
-            except AttributeError:
-                continue
-            self._engine.hook_connect(hook, callback)
+            callback = getattr(self, f'_on_{hook}', None)
+            if callback is not None:
+                self._engine.hook_connect(hook, callback)
 
     def _disconnect_hooks(self):
         """Removes hooks from all of Plover's events."""
 
         if not self._engine:
             raise AssertionError(ERROR_MISSING_ENGINE)
-
         for hook in self._engine.HOOKS:
-            try:
-                callback = getattr(self, f'_on_{hook}')
-            except AttributeError:
-                continue
-            self._engine.hook_disconnect(hook, callback)
+            callback = getattr(self, f'_on_{hook}', None)
+            if callback is not None:
+                self._engine.hook_disconnect(hook, callback)
+
+    # ── Hook callbacks (broadcast to all clients) ──────────────────────
 
     def _on_stroked(self, stroke: Stroke):
         """Broadcasts when a new stroke is performed.
@@ -166,11 +326,10 @@ class EngineServerManager():
         """
 
         stroke_json = jsonpickle.encode(stroke, unpicklable=False)
-
         data = {'stroked': json.loads(stroke_json), 'rtfcre': stroke.rtfcre}
         self._server.queue_message(data)
 
-    def _on_translated(self, old: List[_Action], new: List[_Action]):
+    def _on_translated(self, old: list[_Action], new: list[_Action]):
         """Broadcasts when a new translation occurs.
 
         Args:
@@ -180,11 +339,10 @@ class EngineServerManager():
 
         old_json = jsonpickle.encode(old, unpicklable=False)
         new_json = jsonpickle.encode(new, unpicklable=False)
-
         data = {
             'translated': {
                 'old': json.loads(old_json),
-                'new': json.loads(new_json)
+                'new': json.loads(new_json),
             }
         }
         self._server.queue_message(data)
@@ -201,7 +359,7 @@ class EngineServerManager():
         data = {
             'machine_state_changed': {
                 'machine_type': machine_type,
-                'machine_state': machine_state
+                'machine_state': machine_state,
             }
         }
         self._server.queue_message(data)
@@ -213,10 +371,9 @@ class EngineServerManager():
             enabled: If the output is now enabled or not.
         """
 
-        data = {'output_changed': enabled}
-        self._server.queue_message(data)
+        self._server.queue_message({'output_changed': enabled})
 
-    def _on_config_changed(self, config_update: Config):
+    def _on_config_changed(self, config_update):
         """Broadcasts when the configuration changes.
 
         Args:
@@ -225,9 +382,7 @@ class EngineServerManager():
         """
 
         config_json = jsonpickle.encode(config_update, unpicklable=False)
-
-        data = {'config_changed': json.loads(config_json)}
-        self._server.queue_message(data)
+        self._server.queue_message({'config_changed': json.loads(config_json)})
 
     def _on_dictionaries_loaded(self, dictionaries: StenoDictionaryCollection):
         """Broadcasts when all of the dictionaries get loaded.
@@ -236,7 +391,23 @@ class EngineServerManager():
             dictionaries: A collection of the dictionaries that loaded.
         """
 
-        data = {'dictionaries_loaded': '0'}
+        self._server.queue_message({'dictionaries_loaded': True})
+
+    def _on_dictionary_state_changed(self, filename, dictionary):
+        """Broadcasts when a single dictionary's loading state changes.
+
+        Args:
+            filename: The path to the dictionary file.
+            dictionary: The StenoDictionary or ErroredDictionary instance.
+        """
+
+        data = {
+            'dictionary_state_changed': {
+                'path': filename,
+                'enabled': dictionary.enabled,
+                'errored': isinstance(dictionary, ErroredDictionary),
+            }
+        }
         self._server.queue_message(data)
 
     def _on_send_string(self, text: str):
@@ -246,8 +417,7 @@ class EngineServerManager():
             text: The string that was output.
         """
 
-        data = {'send_string': text}
-        self._server.queue_message(data)
+        self._server.queue_message({'send_string': text})
 
     def _on_send_backspaces(self, count: int):
         """Broadcasts when backspaces are output.
@@ -256,8 +426,7 @@ class EngineServerManager():
             count: The number of backspaces that were output.
         """
 
-        data = {'send_backspaces': count}
-        self._server.queue_message(data)
+        self._server.queue_message({'send_backspaces': count})
 
     def _on_send_key_combination(self, combination: str):
         """Broadcasts when a key combination is output.
@@ -268,38 +437,32 @@ class EngineServerManager():
                 keyboard implementations in plover.oslayer.
         """
 
-        data = {'send_key_combination': combination}
-        self._server.queue_message(data)
+        self._server.queue_message({'send_key_combination': combination})
 
     def _on_add_translation(self):
         """Broadcasts when the add translation tool is opened via a command."""
 
-        data = {'add_translation': True}
-        self._server.queue_message(data)
+        self._server.queue_message({'add_translation': True})
 
     def _on_focus(self):
         """Broadcasts when the main window is focused via a command."""
 
-        data = {'focus': True}
-        self._server.queue_message(data)
+        self._server.queue_message({'focus': True})
 
     def _on_configure(self):
         """Broadcasts when the configuration tool is opened via a command."""
 
-        data = {'configure': True}
-        self._server.queue_message(data)
+        self._server.queue_message({'configure': True})
 
     def _on_lookup(self):
         """Broadcasts when the lookup tool is opened via a command."""
 
-        data = {'lookup': True}
-        self._server.queue_message(data)
+        self._server.queue_message({'lookup': True})
 
     def _on_suggestions(self):
         """Broadcasts when the suggestions tool is opened via a command."""
 
-        data = {'suggestions': True}
-        self._server.queue_message(data)
+        self._server.queue_message({'suggestions': True})
 
     def _on_quit(self):
         """Broadcasts when the application is terminated.
@@ -307,5 +470,4 @@ class EngineServerManager():
         Can be either a full quit or a restart.
         """
 
-        data = {'quit': True}
-        self._server.queue_message(data)
+        self._server.queue_message({'quit': True})
